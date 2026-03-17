@@ -1,7 +1,7 @@
 # 🎓 Mini LinkedIn Académique
 
 ![Status](https://img.shields.io/badge/status-En%20développement-orange)
-![Made with](https://img.shields.io/badge/Made%20with-Java%20JEE-red)
+![Made with](https://img.shields.io/badge/Made%20with-Spring%20Boot-6DB33F)
 ![License](https://img.shields.io/badge/license-Academic-blue)
 
 ---
@@ -49,9 +49,11 @@ sur des projets communs.
 | Couche | Technologie |
 |--------|-------------|
 | Frontend | React.js |
-| Backend | Java JEE |
-| Serveur | Apache Tomcat |
+| Backend | Spring Boot |
+| Sécurité | Spring Security + JWT |
+| ORM | Spring Data JPA / Hibernate |
 | Base de données | MySQL |
+| API | REST API |
 | Outils | Git, GitHub, Jira, Slack |
 
 ---
@@ -64,14 +66,17 @@ git clone https://github.com/your-username/mini-linkedin-academique.git
 # Accéder au projet
 cd mini-linkedin-academique
 
-# Installer les dépendances frontend
-cd frontend && npm install && npm start
+# Lancer le backend Spring Boot
+cd backend
+./mvnw spring-boot:run
+
+# Installer et lancer le frontend
+cd frontend
+npm install
+npm start
 
 # Importer la base de données
 mysql -u root -p < database/mini_linkedin.sql
-
-# Déployer le backend sur Tomcat
-cp target/mini-linkedin.war /path/to/tomcat/webapps/
 ```
 
 ---
@@ -79,10 +84,20 @@ cp target/mini-linkedin.war /path/to/tomcat/webapps/
 ## 🗂️ Structure du Projet
 ```
 mini-linkedin-academique/
-├── frontend/          # React.js
-├── backend/           # Java JEE (Servlets, DAO, Services)
-├── database/          # Script SQL
-└── uml/               # Diagrammes UML
+├── frontend/                  # React.js
+│   └── src/
+│       ├── components/
+│       ├── pages/
+│       └── services/
+├── backend/                   # Spring Boot
+│   └── src/main/java/
+│       ├── controllers/       # REST Controllers
+│       ├── models/            # Entités JPA
+│       ├── repositories/      # Spring Data JPA
+│       ├── services/          # Logique métier
+│       └── security/          # JWT + Spring Security
+├── database/                  # Script SQL
+└── uml/                       # Diagrammes UML
 ```
 
 ---
