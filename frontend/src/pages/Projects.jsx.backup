@@ -1,0 +1,800 @@
+<?php
+$log_path = "C:\\Users\\fayca\\.gemini\\antigravity-ide\\brain\\5ec474ec-1508-416b-a0ab-1c582dec3386\\.system_generated\\logs\\transcript.jsonl";
+$f = fopen($log_path, 'r');
+if (!$f) die("Cannot open log\n");
+
+$part1 = ""; // 1 to 800
+$part2 = ""; // 801 to 1089
+$part3 = ""; // 1000 to 1294
+
+while (($line = fgets($f)) !== false) {
+    if (strpos($line, '"type":"VIEW_FILE"') !== false && strpos($line, 'Projects.jsx') !== false) {
+        $obj = json_decode($line, true);
+        if ($obj) {
+            $content = $obj['content'] ?? '';
+            $step = $obj['step_index'] ?? 0;
+            if (strpos($content, "Showing lines 1 to 800") !== false && $step >= 2913 && $step <= 3785) {
+                $part1 = $content;
+            }
+            if (strpos($content, "Showing lines 801 to 1089") !== false) {
+                $part2 = $content;
+            }
+            if (strpos($content, "Showing lines 1000 to 1294") !== false) {
+                $part3 = $content;
+            }
+        }
+    }
+}
+fclose($f);
+
+if (!$part1) echo "WARNING: part1 (1-800) not found!\n";
+if (!$part2) echo "WARNING: part2 (801-1089) not found!\n";
+if (!$part3) echo "WARNING: part3 (1000-1294) not found!\n";
+
+$lines = array_fill(1, 1350, "");
+
+function parse_part($part, &$lines) {
+    $parts = explode("\n", $part);
+    foreach ($parts as $p) {
+        if (preg_match('/^(\d+): (.*)$/', $p, $m)) {
+            $ln = (int)$m[1];
+            $lines[$ln] = $m[2];
+        }
+    }
+}
+
+parse_part($part1, $lines);
+parse_part($part2, $lines);
+parse_part($part3, $lines);
+
+$recovered = "";
+$max_line = 0;
+for ($i = 1; $i <= 1350; $i++) {
+    if ($lines[$i] !== "") {
+        $max_line = $i;
+    }
+}
+
+echo "Max line recovered: $max_line\n";
+for ($i = 1; $i <= $max_line; $i++) {
+    $recovered .= $lines[$i] . "\n";
+}
+
+file_put_contents("c:\\xampp\\htdocs\\miniii_link\\frontend\\src\\pages\\Projects.jsx.backup", $recovered);
+echo "Backup written to Projects.jsx.backup\n";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              </div>
+                            )}
+                            {(status === 'APPROVED' || status === 'OWNER') && (
+                              <button 
+                                onClick={() => openManage(project)} 
+                                className="w-full sm:w-auto h-[32px] px-5 rounded-full bg-[#1d1d1f] hover:bg-[#0071e3] text-white text-xs font-bold transition-all press-effect flex items-center justify-center gap-1.5 shadow-apple-xs"
+                              >
+                                <span className="material-symbols-outlined text-[16px] font-bold">
+                                  {isOwner ? 'tune' : 'dashboard'}
+                                </span>
+                                {isOwner ? 'Gérer' : 'Workspace'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+          </section>
+
+        </div>
+      </main>
+
+      {/* Project Management Modal (macOS sheet design overlay) */}
+      {managingProject && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs animate-fadeIn" onClick={() => { setManagingProject(null); fetchProjects(); }}>
+          <div 
+            className="bg-white border-l border-black/[0.08] shadow-apple-2xl w-full max-w-2xl h-full flex flex-col overflow-hidden anim-slide-left text-left border-t border-t-black/[0.04]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            
