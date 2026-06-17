@@ -14,6 +14,7 @@ import VideoPlayer from '../components/VideoPlayer';
 import MediaLightbox from '../components/MediaLightbox';
 import ReactionIcon from '../components/ReactionIcon';
 import CommentSection from '../components/CommentSection';
+import FormattedText from '../components/FormattedText';
 import { X, Sparkles, ThumbsUp, MessageCircle, Share2, MoreHorizontal } from 'lucide-react';
 
 const REACTIONS = [
@@ -703,6 +704,7 @@ const Profile = () => {
         setAssistingPost(true);
         try {
             const response = await api.post('/ai/assist-post', {
+                title: newPost.title || '',
                 content: newPost.content,
                 type: newPost.type,
                 has_file: !!newPost.file,
@@ -740,9 +742,14 @@ const Profile = () => {
             const rawBio = response.data.biography || '';
             setBio(rawBio);
             setAbout(rawBio);
-            addToast(response.data.mock_mode ? "Note: Mode démo (Clé API manquante)" : "Biographie générée !", "success");
+            if (response.data.mock_mode) {
+                addToast(response.data.message || "Généré en mode démonstration", "info");
+            } else {
+                addToast("Biographie générée avec succès via l'IA !", "success");
+            }
         } catch (error) {
-            addToast("Erreur lors de la génération", "error");
+            console.error(error);
+            addToast("Erreur lors de la génération avec l'IA.", "error");
         } finally {
             setGeneratingBio(false);
         }
@@ -751,7 +758,13 @@ const Profile = () => {
     const handleUpdateProfile = async (e) => {
         if (e && e.preventDefault) e.preventDefault();
         try {
-            const combinedBio = `${headline.trim()}\n\n${about.trim()}`.trim();
+            let finalHeadline = headline.trim();
+            if (!finalHeadline) {
+                const roleLabel = profileData.role === 'STUDENT' ? 'Étudiant' : (profileData.role === 'TEACHER' ? 'Enseignant' : 'Chercheur');
+                const instName = profileData.profile?.institution || 'IGA';
+                finalHeadline = `${roleLabel} chez ${instName}`;
+            }
+            const combinedBio = `${finalHeadline}\n\n${about.trim()}`.trim();
             const payload = { 
                 first_name: firstName,
                 last_name: lastName,
@@ -1419,7 +1432,7 @@ const Profile = () => {
                                 ) : (
                                     <div className="flex gap-1.5">
                                         <button onClick={handleUpdateProfile} className="h-[32px] px-3.5 rounded-full bg-[#34c759] hover:bg-[#28b248] text-white text-[11px] font-bold transition-all press-effect shadow-sm">
-                                            Sauver
+                                            Sauvegarder
                                         </button>
                                         <button onClick={() => setEditMode(false)} className="h-[32px] px-3.5 rounded-full bg-[#f5f5f7] hover:bg-[#ebebeb] text-[#1d1d1f] text-[11px] font-bold transition-all press-effect shadow-sm">
                                             Fermer
@@ -1710,39 +1723,96 @@ const Profile = () => {
                                     )}
                                 </div>
                                 <div>
-                                    <div className="flex justify-between items-center mb-1 ml-0.5">
-                                        <label className="block text-[10px] font-bold text-[#86868b] uppercase">Biographie</label>
+                                    <div className="flex justify-between items-center mb-2 ml-0.5">
+                                        <label className="text-[10px] font-bold text-[#86868b] uppercase tracking-wider">Biographie</label>
                                         <button 
                                             type="button"
                                             onClick={handleGenerateAiBio}
                                             disabled={generatingBio}
-                                            className="flex items-center gap-1 px-3 py-1 bg-[#e8f0fe] text-[#0071e3] hover:bg-[#c8e2ff] rounded-full text-[10px] font-bold transition-all press-effect"
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#e8f0fe] hover:bg-[#d6e7fe] active:bg-[#c3deff] text-[#0071e3] rounded-full text-[10px] font-bold transition-all duration-200 shadow-sm hover:shadow-md press-effect cursor-pointer"
                                         >
                                             {generatingBio ? (
-                                                <div className="w-3 h-3 border-2 border-[#0071e3] border-t-transparent rounded-full animate-spin" />
+                                                <div className="w-3.5 h-3.5 border-2 border-[#0071e3] border-t-transparent rounded-full animate-spin" />
                                             ) : (
-                                                <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+                                                <span className="material-symbols-outlined text-[15px] animate-pulse">auto_awesome</span>
                                             )}
                                             <span>{generatingBio ? 'Génération...' : 'Générer avec l\'IA ✨'}</span>
                                         </button>
                                     </div>
-                                    <textarea 
-                                        className="w-full bg-[#f5f5f7] hover:bg-[#ebebeb] focus:bg-white focus:border-[#0071e3] border border-transparent focus:ring-4 focus:ring-[#0071e3]/15 rounded-[14px] p-3.5 text-sm outline-none transition-all duration-200 resize-none min-h-[110px]"
-                                        value={about}
-                                        onChange={(e) => setAbout(e.target.value)}
-                                        placeholder="Décrivez votre parcours académique..."
-                                    />
+                                    <div className="relative rounded-[16px] overflow-hidden border border-black/5 focus-within:border-[#0071e3] focus-within:ring-4 focus-within:ring-[#0071e3]/15 transition-all duration-300">
+                                        <textarea 
+                                            className="w-full bg-[#f5f5f7] focus:bg-white text-sm text-[#1d1d1f] font-semibold p-4 outline-none resize-none min-h-[140px] leading-relaxed transition-all duration-300"
+                                            value={about}
+                                            onChange={(e) => setAbout(e.target.value)}
+                                            placeholder="Décrivez votre parcours académique..."
+                                        />
+                                        <div className="absolute right-3.5 bottom-2.5 text-[9px] font-bold text-[#86868b] uppercase bg-white/80 backdrop-blur-md px-2 py-0.5 rounded-md border border-black/5 pointer-events-none select-none">
+                                            {about.length} caractères
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-[#1d1d1f] text-[14px] leading-relaxed whitespace-pre-wrap font-normal">
-                                {(() => {
-                                    const rawBio = profileData.profile?.biography || '';
-                                    const bioLines = rawBio.split('\n');
-                                    const rest = bioLines.slice(1).join('\n').trim();
-                                    return rest || "Aucune description détaillée n'a été rédigée.";
-                                })()}
-                            </p>
+                            <div className="space-y-4 animate-fadeInUp">
+                                {/* Metadata Grid */}
+                                {((profileData.role === 'STUDENT' && (profileData.profile?.field || profileData.profile?.study_level)) ||
+                                 (profileData.role !== 'STUDENT' && (profileData.profile?.department || profileData.profile?.laboratory))) ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4 border-b border-black/5">
+                                        {profileData.role === 'STUDENT' ? (
+                                            <>
+                                                {profileData.profile?.field && (
+                                                    <div className="bg-[#f5f5f7] rounded-[12px] p-3 flex items-center gap-3">
+                                                        <span className="material-symbols-outlined text-[#0071e3] text-[20px]">school</span>
+                                                        <div className="min-w-0">
+                                                            <p className="text-[9px] font-bold text-[#86868b] uppercase tracking-wider">Filière</p>
+                                                            <p className="text-xs font-bold text-[#1d1d1f] mt-0.5 truncate">{profileData.profile.field}</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {profileData.profile?.study_level && (
+                                                    <div className="bg-[#f5f5f7] rounded-[12px] p-3 flex items-center gap-3">
+                                                        <span className="material-symbols-outlined text-[#0071e3] text-[20px]">military_tech</span>
+                                                        <div className="min-w-0">
+                                                            <p className="text-[9px] font-bold text-[#86868b] uppercase tracking-wider">Niveau d'études</p>
+                                                            <p className="text-xs font-bold text-[#1d1d1f] mt-0.5 truncate">{profileData.profile.study_level}</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <>
+                                                {profileData.profile?.department && (
+                                                    <div className="bg-[#f5f5f7] rounded-[12px] p-3 flex items-center gap-3">
+                                                        <span className="material-symbols-outlined text-[#0071e3] text-[20px]">domain</span>
+                                                        <div className="min-w-0">
+                                                            <p className="text-[9px] font-bold text-[#86868b] uppercase tracking-wider">Département</p>
+                                                            <p className="text-xs font-bold text-[#1d1d1f] mt-0.5 truncate">{profileData.profile.department}</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {profileData.profile?.laboratory && (
+                                                    <div className="bg-[#f5f5f7] rounded-[12px] p-3 flex items-center gap-3">
+                                                        <span className="material-symbols-outlined text-[#0071e3] text-[20px]">biotech</span>
+                                                        <div className="min-w-0">
+                                                            <p className="text-[9px] font-bold text-[#86868b] uppercase tracking-wider">Laboratoire</p>
+                                                            <p className="text-xs font-bold text-[#1d1d1f] mt-0.5 truncate">{profileData.profile.laboratory}</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                ) : null}
+
+                                <p className="text-[#1d1d1f] text-[14px] leading-relaxed whitespace-pre-wrap font-normal">
+                                    {(() => {
+                                        const rawBio = profileData.profile?.biography || '';
+                                        const bioLines = rawBio.split('\n');
+                                        const rest = bioLines.slice(1).join('\n').trim();
+                                        return rest || "Aucune description détaillée n'a été rédigée.";
+                                    })()}
+                                </p>
+                            </div>
                         )}
                     </div>
 
@@ -1860,7 +1930,7 @@ const Profile = () => {
                                                 </h4>
                                             )}
                                             {post.content && post.content.trim() !== '' && (
-                                                <p className="text-[14px] text-black/90 leading-[1.5] whitespace-pre-wrap font-normal">{post.content}</p>
+                                                <FormattedText text={post.content} />
                                             )}
                                             
                                             {/* Repost original post embed */}

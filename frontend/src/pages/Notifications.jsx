@@ -31,10 +31,15 @@ const Notifications = () => {
         try {
             await api.post(`/network/accept/${userId}`);
             await markAsRead(notificationId);
+            setNotifications(prev => prev.filter(n => n.id !== notificationId));
             addToast("Connexion acceptée !", "success");
         } catch (error) {
-            console.error(error);
-            addToast("Erreur lors de l'acceptation", "error");
+            if (error?.response?.status === 404) {
+                setNotifications(prev => prev.filter(n => n.id !== notificationId));
+                addToast("Cette demande n'est plus valide.", "info");
+            } else {
+                addToast("Erreur lors de l'acceptation", "error");
+            }
         }
     };
 
@@ -42,10 +47,15 @@ const Notifications = () => {
         try {
             await api.delete(`/network/remove/${userId}`);
             await markAsRead(notificationId);
+            setNotifications(prev => prev.filter(n => n.id !== notificationId));
             addToast("Demande refusée", "info");
         } catch (error) {
-            console.error(error);
-            addToast("Erreur lors du refus", "error");
+            if (error?.response?.status === 404) {
+                setNotifications(prev => prev.filter(n => n.id !== notificationId));
+                addToast("Cette demande n'est plus valide.", "info");
+            } else {
+                addToast("Erreur lors du refus", "error");
+            }
         }
     };
 

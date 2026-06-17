@@ -57,7 +57,7 @@ const ReactionsListModal = ({ isOpen, onClose, likes = [] }) => {
         </div>
 
         {/* Emojis Tabs Row */}
-        <div className="flex gap-1.5 overflow-x-auto px-4 py-3 border-b border-black/5 bg-[#f5f5f7]/50 sticky top-[57px] z-10 scrollbar-none">
+        <div className="flex flex-wrap gap-1.5 px-4 py-3 border-b border-black/5 bg-[#f5f5f7]/50 sticky top-[57px] z-10">
           {REACTIONS_CONFIG.map(tab => {
             const count = getReactionCount(tab.type);
             if (tab.type !== 'ALL' && count === 0) return null; // Only show active reactions

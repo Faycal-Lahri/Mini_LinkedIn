@@ -114,7 +114,16 @@ class NetworkController extends Controller
         $connection = \App\Models\Connection::where('sender_id', $user->id)
             ->where('receiver_id', $receiverId)
             ->where('status', 'PENDING')
-            ->firstOrFail();
+            ->first();
+
+        if (!$connection) {
+            // Maybe already accepted — just clean up the notification
+            \App\Models\Notification::where('user_id', $receiverId)
+                ->where('type', 'CONNECTION_REQUEST')
+                ->where('reference_id', $user->id)
+                ->delete();
+            return response()->json(['message' => 'Demande déjà traitée ou inexistante.'], 200);
+        }
 
         $connection->update(['status' => 'ACCEPTED']);
 
@@ -139,19 +148,19 @@ class NetworkController extends Controller
     {
         $userId = auth()->id();
 
-        // Delete receiver's CONNECTION_REQUEST notification
+        // Delete related notifications in both directions
         \App\Models\Notification::where('user_id', $userId)
             ->where('type', 'CONNECTION_REQUEST')
             ->where('reference_id', $user->id)
             ->delete();
 
-        \App\Models\Connection::where(function($q) use ($userId, $user) {
+        $deleted = \App\Models\Connection::where(function($q) use ($userId, $user) {
             $q->where('sender_id', $userId)->where('receiver_id', $user->id);
         })->orWhere(function($q) use ($userId, $user) {
             $q->where('sender_id', $user->id)->where('receiver_id', $userId);
         })->delete();
 
-        return response()->json(['message' => 'Connexion supprimée.']);
+        return response()->json(['message' => $deleted ? 'Connexion supprimée.' : 'Aucune connexion trouvée.']);
     }
 
     public function suggestions(Request $request): JsonResponse

@@ -27,7 +27,7 @@ function AppContent() {
 
   useEffect(() => {
     setIsNavigating(true);
-    const timeout = setTimeout(() => setIsNavigating(false), 200); // réduit à 200ms
+    const timeout = setTimeout(() => setIsNavigating(false), 80); // réduit à 80ms
     return () => clearTimeout(timeout);
   }, [location.pathname]);
 

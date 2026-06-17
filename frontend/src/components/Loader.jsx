@@ -25,21 +25,32 @@ export const TopBarLoader = ({ isLoading }) => {
   );
 };
 
-export const BrandLoader = () => (
-  <div className="fixed inset-0 z-[10000] bg-white flex flex-col items-center justify-center gap-5">
-    <div className="anim-spring">
-      <div className="flex items-center gap-2">
-        <div style={{ width:36, height:36, borderRadius:9, background:'#0071e3', display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M10 3l8 4.5-8 4.5-8-4.5L10 3z" fill="white" fillOpacity=".9"/>
-            <path d="M4 10.5V16l6 3.5 6-3.5v-5.5" stroke="white" strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+export const BrandLoader = () => {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 120);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div className="fixed inset-0 z-[10000] bg-white flex flex-col items-center justify-center gap-5">
+      <div className="anim-spring">
+        <div className="flex items-center gap-2">
+          <div style={{ width:36, height:36, borderRadius:9, background:'#0071e3', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M10 3l8 4.5-8 4.5-8-4.5L10 3z" fill="white" fillOpacity=".9"/>
+              <path d="M4 10.5V16l6 3.5 6-3.5v-5.5" stroke="white" strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <span style={{ fontSize:22, fontWeight:700, letterSpacing:'-.025em', color:'#1d1d1f' }}>
+            Schol<span style={{ color:'#0071e3' }}>ar</span>
+          </span>
         </div>
-        <span style={{ fontSize:22, fontWeight:700, letterSpacing:'-.025em', color:'#1d1d1f' }}>
-          Schol<span style={{ color:'#0071e3' }}>ar</span>
-        </span>
       </div>
+      <div style={{ width:22, height:22, border:'2px solid #e8e8ed', borderTopColor:'#0071e3', borderRadius:'50%', animation:'spin .7s linear infinite' }} />
     </div>
-    <div style={{ width:22, height:22, border:'2px solid #e8e8ed', borderTopColor:'#0071e3', borderRadius:'50%', animation:'spin .7s linear infinite' }} />
-  </div>
-);
+  );
+};

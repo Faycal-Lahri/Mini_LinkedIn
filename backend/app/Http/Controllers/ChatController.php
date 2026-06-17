@@ -91,23 +91,63 @@ class ChatController extends Controller
         foreach ($articlePosts as $post) {
             $exists = Channel::where('type', 'ARTICLE')->where('post_id', $post->id)->exists();
             if (!$exists) {
+                $channelTitle = $post->article_title ?: ($post->title ?: substr($post->abstract ?: $post->content, 0, 40));
                 Channel::create([
-                    'name' => 'Article: ' . substr($post->content, 0, 20) . '...',
-                    'slug' => 'article-' . $post->id,
-                    'type' => 'ARTICLE',
-                    'post_id' => $post->id,
-                    'description' => 'Discussion autour de l\'article: ' . substr($post->content, 0, 50) . '...'
+                    'name'        => $channelTitle,
+                    'slug'        => 'article-' . $post->id,
+                    'type'        => 'ARTICLE',
+                    'post_id'     => $post->id,
+                    'description' => $post->journal ?? 'Article scientifique',
                 ]);
+            } else {
+                // Update existing channels that still have the old bad name
+                $existingChannel = Channel::where('type', 'ARTICLE')->where('post_id', $post->id)->first();
+                if ($existingChannel && str_starts_with($existingChannel->name, 'Article: ')) {
+                    $channelTitle = $post->article_title ?: ($post->title ?: substr($post->abstract ?: $post->content, 0, 40));
+                    $existingChannel->update([
+                        'name'        => $channelTitle,
+                        'description' => $post->journal ?? 'Article scientifique',
+                    ]);
+                }
             }
         }
 
         $article = Channel::where('type', 'ARTICLE')
             ->get()
             ->map(function($c) {
-                $lastMsg = $c->messages()->latest()->first();
+                // Load the full post with its author for article metadata
+                if ($c->post_id) {
+                    $post = \App\Models\Post::with('author.profile')->find($c->post_id);
+                    if ($post) {
+                        $c->article_post = [
+                            'id'            => $post->id,
+                            'article_title' => $post->article_title,
+                            'journal'       => $post->journal,
+                            'doi'           => $post->doi,
+                            'keywords'      => $post->keywords,
+                            'abstract'      => $post->abstract,
+                            'author'        => $post->author ? [
+                                'id'         => $post->author->id,
+                                'first_name' => $post->author->first_name,
+                                'last_name'  => $post->author->last_name,
+                                'role'       => $post->author->role,
+                                'photo_url'  => $post->author->profile?->photo_url,
+                            ] : null,
+                        ];
+                        // Use article_title as the channel display name
+                        if ($post->article_title) {
+                            $c->name = $post->article_title;
+                        }
+                    }
+                }
+
+                $lastMsg = $c->messages()->with('sender')->latest()->first();
                 if ($lastMsg) {
-                    $c->description = $lastMsg->content ? $lastMsg->content : ($lastMsg->file_url ? '📁 Pièce jointe' : '');
-                    $c->last_message = $lastMsg;
+                    $c->description = $lastMsg->content ?: ($lastMsg->file_url ? '📁 Pièce jointe' : '');
+                    $c->last_message_at = $lastMsg->created_at;
+                    $c->last_sender    = $lastMsg->sender?->first_name;
+                } else {
+                    $c->description = $c->description ?? 'Aucun message — Démarrez la discussion';
                 }
                 return $c;
             });

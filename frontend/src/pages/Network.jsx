@@ -10,12 +10,15 @@ const Network = () => {
     const { user: currentUser } = useAuthStore();
     const { showConfirm } = useConfirmStore();
     const [users, setUsers] = useState([]);
+    const [aiSuggestions, setAiSuggestions] = useState([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
+    const [loadingAi, setLoadingAi] = useState(false);
     const [filter, setFilter] = useState('ALL');
 
     useEffect(() => {
         fetchNetwork();
+        fetchAiSuggestions();
     }, []);
 
     const fetchNetwork = async () => {
@@ -27,6 +30,18 @@ const Network = () => {
             console.error('Failed to fetch network', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchAiSuggestions = async () => {
+        setLoadingAi(true);
+        try {
+            const response = await api.get('/ai/connections');
+            setAiSuggestions(response.data);
+        } catch (error) {
+            console.error('Failed to fetch AI suggestions', error);
+        } finally {
+            setLoadingAi(false);
         }
     };
 
@@ -50,6 +65,7 @@ const Network = () => {
         try {
             await api.post(`/network/request/${userId}`);
             setUsers(users.map(u => u.id === userId ? { ...u, connection_status: 'PENDING', is_sender: true } : u));
+            setAiSuggestions(aiSuggestions.map(item => item.user.id === userId ? { ...item, user: { ...item.user, connection_status: 'PENDING', is_sender: true } } : item));
         } catch (error) {
             console.error(error);
         }
@@ -59,6 +75,7 @@ const Network = () => {
         try {
             await api.post(`/network/accept/${userId}`);
             setUsers(users.map(u => u.id === userId ? { ...u, connection_status: 'ACCEPTED' } : u));
+            setAiSuggestions(aiSuggestions.map(item => item.user.id === userId ? { ...item, user: { ...item.user, connection_status: 'ACCEPTED' } } : item));
         } catch (error) {
             console.error(error);
         }
@@ -69,6 +86,7 @@ const Network = () => {
             try {
                 await api.delete(`/network/remove/${userId}`);
                 setUsers(users.map(u => u.id === userId ? { ...u, connection_status: 'NONE' } : u));
+                setAiSuggestions(aiSuggestions.map(item => item.user.id === userId ? { ...item, user: { ...item.user, connection_status: 'NONE', is_sender: false } } : item));
             } catch (error) {
                 console.error(error);
             }
@@ -170,6 +188,99 @@ const Network = () => {
                         />
                     </div>
                 </div>
+
+                {search.trim() === '' && aiSuggestions.length > 0 && (
+                    <div className="bg-gradient-to-br from-indigo-500/[0.04] to-violet-500/[0.01] rounded-[20px] border border-indigo-500/10 p-5 shadow-apple-xs mb-1 animate-fadeInUp">
+                        <div className="flex items-center gap-2 mb-4">
+                            <span className="material-symbols-outlined text-[20px] text-indigo-500 animate-pulse">auto_awesome</span>
+                            <h2 className="font-bold text-[14px] text-indigo-950 tracking-[-0.01em]">Suggestions de connexions intelligentes (IA)</h2>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {aiSuggestions.map((item) => {
+                                const u = item.user;
+                                return (
+                                    <div 
+                                        key={`ai-${u.id}`} 
+                                        className="bg-white rounded-[12px] border border-black/5 hover:border-indigo-500/30 shadow-apple-xs hover:shadow-apple-sm transition-all duration-300 relative flex flex-col justify-between overflow-hidden"
+                                        style={{ minHeight: '260px' }}
+                                    >
+                                        {/* Dismiss Button */}
+                                        <button 
+                                            onClick={() => setAiSuggestions(prev => prev.filter(s => s.user.id !== u.id))}
+                                            className="absolute top-2 right-2 h-5 w-5 rounded-full bg-black/20 hover:bg-black/40 text-white flex items-center justify-center transition-all cursor-pointer z-20 border-none animate-none"
+                                            title="Ignorer"
+                                        >
+                                            <span className="material-symbols-outlined text-[12px] font-bold">close</span>
+                                        </button>
+
+                                        {/* Mini Gradient Banner */}
+                                        <div 
+                                            className="h-[48px] relative w-full flex-shrink-0 bg-slate-50 overflow-hidden"
+                                        >
+                                            <div className="w-full h-full" style={{ background: getDynamicGradient(u.id) }} />
+                                            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
+                                        </div>
+
+                                        {/* Avatar */}
+                                        <div className="relative z-10 flex justify-center -mt-[28px] flex-shrink-0">
+                                            <Link to={`/profile/${u.id}`} className="inline-block press-effect">
+                                                <div className="h-[56px] w-[56px] rounded-full bg-white p-0.5 shadow-apple-md overflow-hidden mx-auto border-2 border-white">
+                                                    <div className="h-full w-full bg-[#f5f5f7] flex items-center justify-center text-xl rounded-full overflow-hidden border border-slate-100 uppercase">
+                                                        {u.profile?.photo_url ? (
+                                                            <img src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/storage/${u.profile.photo_url}`} className="object-cover h-full w-full rounded-full" alt="" onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80'; }} />
+                                                        ) : (
+                                                            <span className="font-bold text-[#86868b] text-sm uppercase">{u.first_name[0]}{u.last_name[0]}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </Link>
+                                        </div>
+
+                                        {/* Name, Role & AI reason */}
+                                        <div className="px-3 pb-3 pt-1 text-center flex-grow flex flex-col justify-between items-stretch">
+                                            <div className="space-y-1">
+                                                <Link to={`/profile/${u.id}`} className="block hover:underline truncate">
+                                                    <h4 className="font-bold text-[#1d1d1f] text-[13px] leading-tight">
+                                                        {u.first_name} {u.last_name}
+                                                    </h4>
+                                                </Link>
+                                                <p className="text-[10.5px] text-[#6e6e73] font-semibold truncate leading-none">
+                                                    {u.role === 'STUDENT' ? 'Étudiant' : u.role === 'TEACHER' ? 'Enseignant' : 'Chercheur'} · {u.profile?.field || 'Ingénierie'}
+                                                </p>
+                                                
+                                                {/* Reason Box */}
+                                                <div className="mt-2.5 p-2 rounded-[8px] bg-indigo-500/[0.03] border border-indigo-500/5 text-[10px] text-indigo-650 font-medium leading-normal text-left">
+                                                    ✨ {item.reason}
+                                                </div>
+                                            </div>
+
+                                            {/* Action Button */}
+                                            <div className="pt-3 flex-shrink-0">
+                                                {u.connection_status === 'ACCEPTED' ? (
+                                                    <span className="inline-flex w-full h-[28px] items-center justify-center border border-[#34c759]/30 bg-[#34c759]/[0.04] text-[#34c759] font-bold text-[10.5px] rounded-full select-none cursor-default">
+                                                        Amis
+                                                    </span>
+                                                ) : u.connection_status === 'PENDING' ? (
+                                                    <span className="inline-flex w-full h-[28px] items-center justify-center bg-gray-50 border border-gray-200 text-gray-400 font-bold text-[10.5px] rounded-full select-none cursor-default">
+                                                        En attente...
+                                                    </span>
+                                                ) : (
+                                                    <button 
+                                                        onClick={() => handleSendRequest(u.id)}
+                                                        className="w-full inline-flex items-center justify-center gap-1 h-[28px] rounded-full border border-indigo-500 text-indigo-600 hover:bg-indigo-50 text-[10.5px] font-bold transition-all press-effect bg-transparent cursor-pointer"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[14px] font-bold">person_add</span>
+                                                        <span>Se connecter</span>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
 
                 <div className="flex flex-col gap-5">
                     {/* iOS Segmented Tab Filters */}

@@ -13,6 +13,24 @@
   html  { scroll-behavior: smooth; }
   body  { background: #f5f5f7; color: #1d1d1f; font-size: 14px; line-height: 1.5; }
   ::selection { background: rgba(0,113,227,0.15); color: #0071e3; }
+
+  /* Premium macOS Global Input Styling */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="hidden"]) {
+    background-color: #f5f5f7 !important;
+    border: 1px solid transparent !important;
+    border-radius: 10px !important;
+    outline: none !important;
+    transition: all 0.2s ease !important;
+    font-weight: 600 !important;
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="hidden"]):hover {
+    background-color: #ebebeb !important;
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="hidden"]):focus {
+    background-color: #ffffff !important;
+    border: 1px solid #0071e3 !important;
+    box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.12) !important;
+  }
 }
 
 @layer components {

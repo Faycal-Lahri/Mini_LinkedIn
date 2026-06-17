@@ -10,11 +10,12 @@ import CommentSection from '../components/CommentSection';
 import ReactionIcon from '../components/ReactionIcon';
 import ReactionsListModal from '../components/ReactionsListModal';
 import ShareModal from '../components/ShareModal';
+import FormattedText from '../components/FormattedText';
 import { Share2, MessageCircle, ThumbsUp, Users, BookOpen, FolderGit2, Bell, Search, Plus, Trash2, Globe, Heart, Lightbulb } from 'lucide-react';
 
 const BLANK = {
   article_title: '', abstract: '', content: '',
-  journal: '', doi: '', keywords: '', file: null,
+  journal: '', doi: '', keywords: '', file: null, cover_image: null,
 };
 
 const STORAGE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -36,9 +37,11 @@ export default function Articles() {
   const [loading, setLoading]             = useState(true);
   const [showForm, setShowForm]           = useState(false);
   const [posting, setPosting]             = useState(false);
+  const [analyzingPdf, setAnalyzingPdf]   = useState(false);
   const [form, setForm]                   = useState(BLANK);
   const [search, setSearch]               = useState('');
   const [expandedComments, setExpandedComments] = useState({});
+  const [expandedContent, setExpandedContent]   = useState({});
 
   // LinkedIn Reactions States
   const [reactionMenuOpen, setReactionMenuOpen] = useState({}); // { [postId]: bool }
@@ -239,6 +242,38 @@ export default function Articles() {
     );
   }, [articles, search]);
 
+  /* ── Analyze PDF with AI ── */
+  const handleAnalyzePdf = async () => {
+    if (!form.file) return;
+    setAnalyzingPdf(true);
+    const formData = new FormData();
+    formData.append('pdf', form.file);
+
+    try {
+      addToast("Extraction et analyse du PDF par l'IA...", "info");
+      const response = await api.post('/ai/analyze-pdf', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const data = response.data;
+      setForm(prev => ({
+        ...prev,
+        article_title: data.title || prev.article_title,
+        abstract: data.abstract || prev.abstract,
+        content: data.content || prev.content,
+        journal: data.journal || prev.journal,
+        doi: data.doi || prev.doi,
+        keywords: data.keywords || prev.keywords,
+      }));
+      addToast("Métadonnées de l'article générées avec succès !", "success");
+    } catch (error) {
+      console.error(error);
+      const msg = error.response?.data?.message || "Erreur lors de l'analyse du PDF par l'IA";
+      addToast(msg, "error");
+    } finally {
+      setAnalyzingPdf(false);
+    }
+  };
+
   /* ── Submit ── */
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -254,6 +289,7 @@ export default function Articles() {
       fd.append('doi', form.doi);
       fd.append('keywords', form.keywords);
       if (form.file) fd.append('file', form.file);
+      if (form.cover_image) fd.append('cover_image', form.cover_image);
 
       const res = await api.post('/posts', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       setArticles(prev => [res.data, ...prev]);
@@ -277,6 +313,7 @@ export default function Articles() {
   });
 
   const toggleComments = (id) => setExpandedComments(p => ({ ...p, [id]: !p[id] }));
+  const toggleContent = (id) => setExpandedContent(p => ({ ...p, [id]: !p[id] }));
 
   if (loading) return <BrandLoader />;
 
@@ -506,6 +543,54 @@ export default function Articles() {
                     />
                   </div>
 
+                  {/* IMAGE DE COUVERTURE */}
+                  <div className="text-left">
+                    <label className="block text-[9.5px] font-bold text-[#86868b] uppercase tracking-widest mb-2 px-1">Image de couverture</label>
+                    <div className="relative">
+                      {form.cover_image ? (
+                        <div className="relative rounded-[10px] overflow-hidden border border-[#af52de]/20 bg-[#f5f5f7]">
+                          <img
+                            src={URL.createObjectURL(form.cover_image)}
+                            alt="Aperçu couverture"
+                            className="w-full h-[140px] object-cover block"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+                          <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between">
+                            <span className="text-white text-[10px] font-bold truncate max-w-[60%] drop-shadow">{form.cover_image.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => setForm({ ...form, cover_image: null })}
+                              className="bg-white/90 hover:bg-white text-gray-700 hover:text-red-500 text-[10px] font-bold px-2 py-0.5 rounded-full transition-all border-none cursor-pointer shadow"
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <label
+                          htmlFor="article-cover-image"
+                          className="flex flex-col items-center justify-center w-full h-[100px] rounded-[10px] border-2 border-dashed border-[#af52de]/30 bg-[#f9f5ff] hover:bg-[#af52de]/5 hover:border-[#af52de]/60 transition-all cursor-pointer group"
+                        >
+                          <span className="material-symbols-outlined text-[28px] text-[#af52de]/60 group-hover:text-[#af52de] transition-colors mb-1">add_photo_alternate</span>
+                          <span className="text-[11px] font-bold text-[#af52de]/70 group-hover:text-[#af52de]">Cliquer pour ajouter une photo</span>
+                          <span className="text-[9.5px] text-[#86868b] mt-0.5">JPG, PNG, WebP (Max. 5 Mo)</span>
+                        </label>
+                      )}
+                      <input
+                        type="file"
+                        id="article-cover-image"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        onChange={e => {
+                          const f = e.target.files[0];
+                          if (f) setForm({ ...form, cover_image: f });
+                          e.target.value = '';
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* PDF */}
                   <div className="bg-[#f5f5f7] rounded-[8px] p-3.5 border border-black/5 flex items-center justify-between gap-3 text-left">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-white border border-black/5 rounded-[6px] flex items-center justify-center text-[#af52de]">
@@ -513,25 +598,42 @@ export default function Articles() {
                       </div>
                       <div>
                         <h5 className="text-[11.5px] font-bold text-[#1d1d1f]">Attacher le PDF ou Document</h5>
-                        <p className="text-[9.5px] text-[#86868b] mt-0.5">PDF ou Word (Max. 10 Mo)</p>
+                        <p className="text-[9.5px] text-[#86868b] mt-0.5">{form.file ? form.file.name : 'PDF ou Word (Max. 10 Mo)'}</p>
                       </div>
                     </div>
-                    
-                    <input 
-                      type="file" 
+                    <input
+                      type="file"
                       id="article-file"
                       accept=".pdf,.doc,.docx"
                       className="hidden"
-                      onChange={e => setForm({ ...form, file: e.target.files[0] })} 
+                      onChange={e => setForm({ ...form, file: e.target.files[0] })}
                     />
-                    <label 
+                    <label
                       htmlFor="article-file"
                       className="h-[28px] px-3.5 bg-white border border-black/10 hover:bg-[#f5f5f7] text-[#1d1d1f] text-xs font-semibold rounded-full flex items-center gap-1 transition-all cursor-pointer shadow-apple-xs select-none"
                     >
                       <span className="material-symbols-outlined text-[14px]">attach_file</span>
-                      {form.file ? form.file.name : 'Choisir'}
+                      {form.file ? 'Changer' : 'Choisir'}
                     </label>
                   </div>
+
+                  {form.file && form.file.name.toLowerCase().endsWith('.pdf') && (
+                    <div className="flex justify-start pt-1 animate-fadeIn">
+                      <button
+                        type="button"
+                        onClick={handleAnalyzePdf}
+                        disabled={analyzingPdf}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-all shadow-apple-xs border-none cursor-pointer"
+                      >
+                        {analyzingPdf ? (
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <span className="material-symbols-outlined text-[15px] font-bold">auto_awesome</span>
+                        )}
+                        <span>Générer résumé, mots-clés & revue avec l'IA Scholar ✨</span>
+                      </button>
+                    </div>
+                  )}
 
                   <div className="flex justify-end gap-2 pt-1">
                     <button 
@@ -574,7 +676,7 @@ export default function Articles() {
                   const isAdmin = user?.role === 'ADMIN';
                   const commentsOpen = expandedComments[article.id];
 
-                  // Local covers based on article ID
+                  // Use uploaded cover or fallback to a random Unsplash cover
                   const covers = [
                     "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=600&q=80",
                     "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=600&q=80",
@@ -582,7 +684,9 @@ export default function Articles() {
                     "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=600&q=80",
                     "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=600&q=80",
                   ];
-                  const articleCover = covers[article.id % covers.length];
+                  const articleCover = article.cover_image_url
+                    ? `${STORAGE}/storage/${article.cover_image_url}`
+                    : covers[article.id % covers.length];
 
                   const currentReaction = userReactions[article.id] !== undefined 
                     ? userReactions[article.id] 
@@ -694,8 +798,32 @@ export default function Articles() {
                             </div>
                           )}
 
-                          {!article.abstract && article.content && (
-                            <p className="text-[13.5px] text-black/85 leading-relaxed mb-3 whitespace-pre-wrap font-normal">{article.content}</p>
+                          {article.content && (
+                            <div className="mt-3 text-left">
+                              {expandedContent[article.id] ? (
+                                <div className="border-t border-[#dad8d6]/50 pt-3 mt-3 animate-fadeIn space-y-2">
+                                  <h4 className="font-bold text-[13.5px] text-black/90 mb-2">Note de recherche / Article complet :</h4>
+                                  <FormattedText text={article.content} />
+                                  <button 
+                                    type="button"
+                                    onClick={() => toggleContent(article.id)}
+                                    className="text-[11.5px] font-bold text-[#af52de] hover:underline bg-transparent border-none p-0 cursor-pointer mt-2 flex items-center gap-0.5 leading-none"
+                                  >
+                                    <span>Réduire l'article</span>
+                                    <span className="material-symbols-outlined text-[13px] font-bold">keyboard_arrow_up</span>
+                                  </button>
+                                </div>
+                              ) : (
+                                <button 
+                                  type="button"
+                                  onClick={() => toggleContent(article.id)}
+                                  className="text-[11.5px] font-bold text-[#af52de] hover:underline bg-transparent border-none p-0 cursor-pointer flex items-center gap-0.5 mt-2 leading-none"
+                                >
+                                  <span>Lire la suite (Article complet)</span>
+                                  <span className="material-symbols-outlined text-[13px] font-bold">keyboard_arrow_down</span>
+                                </button>
+                              )}
+                            </div>
                           )}
 
                           {/* Keywords */}

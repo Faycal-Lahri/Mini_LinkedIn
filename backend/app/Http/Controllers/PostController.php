@@ -109,6 +109,7 @@ class PostController extends Controller
             'doi'           => 'nullable|string|max:255',
             'keywords'      => 'nullable|string|max:500',
             'abstract'      => 'nullable|string',
+            'cover_image'   => 'nullable|image|max:5120',
         ]);
 
         // Seuls Enseignants et Chercheurs peuvent publier des articles scientifiques
@@ -124,7 +125,12 @@ class PostController extends Controller
 
         $fileUrls = [];
         $fileUrl = null;
+        $coverImageUrl = null;
         $mediaType = $validated['media_type'] ?? null;
+
+        if ($request->hasFile('cover_image')) {
+            $coverImageUrl = $request->file('cover_image')->store('posts/covers', 'public');
+        }
 
         if ($mediaType === 'IMAGE' && $request->hasFile('files')) {
             foreach ($request->file('files') as $uploadedFile) {
@@ -168,6 +174,7 @@ class PostController extends Controller
             'doi'           => $validated['doi'] ?? null,
             'keywords'      => $validated['keywords'] ?? null,
             'abstract'      => $validated['abstract'] ?? null,
+            'cover_image_url' => $coverImageUrl,
         ]);
 
         return response()->json($post->load('author.profile'), 201);

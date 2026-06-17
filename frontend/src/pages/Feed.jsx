@@ -19,6 +19,7 @@ import ShareModal from '../components/ShareModal';
 import VideoPlayer from '../components/VideoPlayer';
 import MediaLightbox from '../components/MediaLightbox';
 import ReactionIcon from '../components/ReactionIcon';
+import FormattedText from '../components/FormattedText';
 
 const REACTIONS = [
   { type: 'LIKE',        emoji: '👍', label: 'J\'aime',       color: '#0071e3' },
@@ -416,14 +417,17 @@ const Feed = () => {
     setAssistingPost(true);
     try {
       const response = await api.post('/ai/assist-post', {
+        title: newPost.title || '',
         content: newPost.content,
         type: newPost.type,
         has_file: !!newPost.file,
         file_name: newPost.file ? newPost.file.name : null
       });
       setNewPost({ ...newPost, content: response.data.content });
+      addToast("Publication améliorée par l'IA !", "success");
     } catch (error) {
       console.error(error);
+      addToast("Erreur lors de l'amélioration avec l'IA", "error");
     } finally {
       setAssistingPost(false);
     }
@@ -679,7 +683,7 @@ const Feed = () => {
                         </h4>
                       )}
                       {post.content && post.content.trim() !== '' && (
-                        <p className="text-[14px] text-black/90 leading-[1.5] whitespace-pre-wrap font-normal">{post.content}</p>
+                        <FormattedText text={post.content} />
                       )}
                       
                       {/* Repost original post embed */}
@@ -1147,8 +1151,9 @@ const Feed = () => {
             <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1d1d1f', marginBottom: 16 }}>Créer un post</h3>
             
             <form onSubmit={handleCreatePost} className="space-y-4">
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', bg: '#f5f5f7', border: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', bg: '#f5f5f7', border: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {user?.profile?.photo_url ? (
                     <img src={`${STORAGE}/storage/${user.profile.photo_url}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80'; }} />
                   ) : (
@@ -1206,6 +1211,21 @@ const Feed = () => {
                     )}
                   </div>
                 </div>
+              </div>
+                {/* AI Assist Button */}
+                <button
+                  type="button"
+                  onClick={handleAssistPost}
+                  disabled={assistingPost || !newPost.content.trim()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#e8f0fe] hover:bg-[#c8e2ff] disabled:opacity-50 disabled:cursor-not-allowed text-[#0071e3] rounded-full text-[11px] font-bold transition-all press-effect border-none cursor-pointer"
+                >
+                  {assistingPost ? (
+                    <div className="w-3.5 h-3.5 border-2 border-[#0071e3] border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5" />
+                  )}
+                  <span>Améliorer avec l'IA ✨</span>
+                </button>
               </div>
 
               {/* Title input */}

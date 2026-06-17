@@ -582,10 +582,18 @@ const Navbar = () => {
     try {
       await api.post(`/network/accept/${userId}`);
       await markAsRead(notificationId);
+      // Remove notification from list
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      setUnread(prev => Math.max(0, prev - 1));
       addToast("Connexion acceptée !", "success");
-      refreshNotifications();
     } catch (error) {
-      addToast("Erreur lors de l'acceptation", "error");
+      // 404 means user not found, still remove the stale notification
+      if (error?.response?.status === 404) {
+        setNotifications(prev => prev.filter(n => n.id !== notificationId));
+        addToast("Cette demande n'est plus valide.", "info");
+      } else {
+        addToast("Erreur lors de l'acceptation", "error");
+      }
     }
   };
 
@@ -593,10 +601,17 @@ const Navbar = () => {
     try {
       await api.delete(`/network/remove/${userId}`);
       await markAsRead(notificationId);
+      // Remove notification from list
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      setUnread(prev => Math.max(0, prev - 1));
       addToast("Demande refusée", "info");
-      refreshNotifications();
     } catch (error) {
-      addToast("Erreur lors du refus", "error");
+      if (error?.response?.status === 404) {
+        setNotifications(prev => prev.filter(n => n.id !== notificationId));
+        addToast("Cette demande n'est plus valide.", "info");
+      } else {
+        addToast("Erreur lors du refus", "error");
+      }
     }
   };
 
@@ -1089,7 +1104,7 @@ const Navbar = () => {
                   <p style={{ fontSize:14, fontWeight:600, color:'#1d1d1f' }}>{user?.first_name} {user?.last_name}</p>
                   <p style={{ fontSize:11, color:'#86868b', marginTop:1 }}>{user?.email}</p>
                 </div>
-                {[{icon:User, label:'Mon profil', path:'/profile'}, {icon:Settings, label:'Paramètres', path:'/profile'}].map(i=>(
+                {[{icon:User, label:'Profil', path:'/profile'}].map(i=>(
                   <Link key={i.label} to={i.path} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 16px', textDecoration:'none', color:'#1d1d1f', fontSize:13, fontWeight:500, transition:'background .15s' }}
                     onMouseEnter={e=>e.currentTarget.style.background='rgba(0,0,0,.04)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
                     <i.icon style={{ width:15, height:15, color:'#6e6e73' }} />{i.label}
@@ -1144,7 +1159,7 @@ const Navbar = () => {
         </>
       )}
       {/* Collapsible Messaging Drawer (LinkedIn style) */}
-      {user && (
+      {user && loc.pathname !== '/chat' && (
         <div 
           style={{
             position: 'fixed',

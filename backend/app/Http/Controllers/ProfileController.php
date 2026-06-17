@@ -9,6 +9,7 @@ use App\Models\Skill;
 use App\Models\Certification;
 use App\Models\Experience;
 use App\Models\Publication;
+use Illuminate\Support\Facades\Http;
 
 class ProfileController extends Controller
 {
@@ -359,5 +360,323 @@ class ProfileController extends Controller
             return response()->json(['message' => 'Non autorisé'], 403);
         $education->delete();
         return response()->json(['message' => 'Éducation supprimée.']);
+    }
+
+    /**
+     * Generate an AI-powered professional biography in French.
+     */
+    public function generateAiBiography(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if ($request->has('user_id') && $user->role === 'ADMIN') {
+            $user = User::find($request->input('user_id')) ?? $user;
+        }
+        $user->load(['profile.skills', 'profile.experiences', 'profile.certifications', 'profile.educations']);
+
+        $apiKey = env('OPENROUTER_API_KEY');
+
+        // Check if key is configured, if not, do fallback
+        if (empty($apiKey)) {
+            $bio = $this->getMockBio($user);
+            return response()->json([
+                'biography' => $bio,
+                'mock_mode' => true,
+                'message' => 'Généré en mode démonstration (aucune clé API configurée dans .env)'
+            ]);
+        }
+
+        $prompt = $this->buildBioPrompt($user);
+        $bio = '';
+
+        try {
+            $response = Http::withoutVerifying()->withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+                'Content-Type' => 'application/json',
+                'HTTP-Referer' => 'http://localhost:8000',
+                'X-Title' => 'Mini-LinkedIn',
+            ])->post('https://openrouter.ai/api/v1/chat/completions', [
+                'model' => 'google/gemma-4-31b-it:free',
+                'messages' => [
+                    ['role' => 'user', 'content' => $prompt]
+                ]
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $bio = $data['choices'][0]['message']['content'] ?? '';
+            } else {
+                // Try fallback to openrouter/free
+                $fallbackResponse = Http::withoutVerifying()->withHeaders([
+                    'Authorization' => 'Bearer ' . $apiKey,
+                    'Content-Type' => 'application/json',
+                    'HTTP-Referer' => 'http://localhost:8000',
+                    'X-Title' => 'Mini-LinkedIn',
+                ])->post('https://openrouter.ai/api/v1/chat/completions', [
+                    'model' => 'openrouter/free',
+                    'messages' => [
+                        ['role' => 'user', 'content' => $prompt]
+                    ]
+                ]);
+
+                if ($fallbackResponse->successful()) {
+                    $data = $fallbackResponse->json();
+                    $bio = $data['choices'][0]['message']['content'] ?? '';
+                } else {
+                    throw new \Exception('Erreur OpenRouter (Gemma + Fallback) : ' . $fallbackResponse->body());
+                }
+            }
+        } catch (\Exception $e) {
+            try {
+                $fallbackResponse = Http::withoutVerifying()->withHeaders([
+                    'Authorization' => 'Bearer ' . $apiKey,
+                    'Content-Type' => 'application/json',
+                    'HTTP-Referer' => 'http://localhost:8000',
+                    'X-Title' => 'Mini-LinkedIn',
+                ])->post('https://openrouter.ai/api/v1/chat/completions', [
+                    'model' => 'openrouter/free',
+                    'messages' => [
+                        ['role' => 'user', 'content' => $prompt]
+                    ]
+                ]);
+
+                if ($fallbackResponse->successful()) {
+                    $data = $fallbackResponse->json();
+                    $bio = $data['choices'][0]['message']['content'] ?? '';
+                } else {
+                    throw new \Exception($e->getMessage());
+                }
+            } catch (\Exception $e2) {
+                return response()->json([
+                    'biography' => $this->getMockBio($user),
+                    'error' => 'Erreur lors de la génération avec l\'IA : ' . $e2->getMessage(),
+                    'mock_mode' => true
+                ], 200);
+            }
+        }
+
+        return response()->json([
+            'biography' => trim($bio),
+            'mock_mode' => false
+        ]);
+    }
+
+    /**
+     * Build the generation prompt based on user profile.
+     */
+    private function buildBioPrompt(User $user): string
+    {
+        $prompt = "Tu es un rédacteur professionnel de profils LinkedIn. Génère une biographie professionnelle captivante, fluide et naturelle en français (environ 2 ou 3 paragraphes, maximum 150 mots) pour " . $user->first_name . " " . $user->last_name . ".\n\n";
+
+        $prompt .= "Voici ses informations réelles issues de la base de données :\n";
+        $prompt .= "- Rôle : " . ($user->role === 'STUDENT' ? 'Étudiant' : ($user->role === 'TEACHER' ? 'Enseignant' : 'Chercheur')) . "\n";
+        
+        if ($user->profile) {
+            if ($user->profile->biography) {
+                $bioLines = explode("\n", $user->profile->biography);
+                $headline = trim($bioLines[0]);
+                if ($headline) {
+                    $prompt .= "- Titre professionnel (Headline) : " . $headline . "\n";
+                }
+            }
+            if ($user->profile->location) {
+                $prompt .= "- Localisation : " . $user->profile->location . "\n";
+            }
+            if ($user->profile->institution) {
+                $prompt .= "- Établissement/Institution : " . $user->profile->institution . "\n";
+            }
+            
+            if ($user->role === 'STUDENT') {
+                if ($user->profile->field) {
+                    $prompt .= "- Filière : " . $user->profile->field . "\n";
+                }
+                if ($user->profile->study_level) {
+                    $prompt .= "- Niveau d'études : " . $user->profile->study_level . "\n";
+                }
+            } else {
+                if ($user->profile->department) {
+                    $prompt .= "- Département : " . $user->profile->department . "\n";
+                }
+                if ($user->profile->laboratory) {
+                    $prompt .= "- Laboratoire : " . $user->profile->laboratory . "\n";
+                }
+            }
+        }
+
+        if ($user->profile && count($user->profile->experiences) > 0) {
+            $prompt .= "- Expériences :\n";
+            foreach ($user->profile->experiences as $exp) {
+                $prompt .= "  * " . $exp->title . " chez " . $exp->organization . " (" . $exp->type . ")";
+                if ($exp->description) {
+                    $prompt .= " : " . $exp->description;
+                }
+                $prompt .= "\n";
+            }
+        }
+
+        if ($user->profile && count($user->profile->certifications) > 0) {
+            $prompt .= "- Certifications :\n";
+            foreach ($user->profile->certifications as $cert) {
+                $prompt .= "  * " . $cert->title . " (délivrée par " . $cert->issuing_organization . ")\n";
+            }
+        }
+
+        if ($user->profile && count($user->profile->skills) > 0) {
+            $skills = $user->profile->skills->pluck('name')->toArray();
+            $prompt .= "- Compétences : " . implode(', ', $skills) . "\n";
+        }
+
+        $prompt .= "\n--- INSTRUCTIONS DE RÉDACTION STRICTES SELON LE PROFIL ---\n";
+        $prompt .= "1. **Ton & Style** : Rédige à la première personne du singulier ('Je'). Le ton doit être professionnel, chaleureux, fluide et sans répétitions.\n";
+        $prompt .= "2. **Cas de Profil Vide** (pas d'expériences, pas de compétences, pas de titre) :\n";
+        $prompt .= "   - Ne mentionne aucune expérience fictive ou compétence non listée.\n";
+        $prompt .= "   - Rédige un texte motivé axé sur l'apprentissage, la curiosité académique et la volonté de grandir professionnellement au sein de son établissement (" . ($user->profile->institution ?? 'son école') . ").\n";
+        $prompt .= "3. **Cas de Profil Partiel** :\n";
+        $prompt .= "   - Si pas d'expériences : Mets l'accent sur sa formation (" . ($user->profile->field ?? 'ses études') . "), ses compétences et ses objectifs professionnels.\n";
+        $prompt .= "   - Si pas de compétences ou pas de certifications : N'invente rien, structure le texte autour de ses expériences et de son parcours académique.\n";
+        $prompt .= "4. **Cas de Profil Complet** : Fusionne les expériences, compétences et certifications de manière cohérente pour raconter son histoire professionnelle.\n";
+        $prompt .= "5. **Format** : Pas de titres, pas d'introduction, pas de salutations (pas de 'Bonjour !' ou 'Voici sa biographie :'). Renvoie DIRECTEMENT le texte de la biographie générée.\n";
+
+        return $prompt;
+    }
+
+    /**
+     * Generate a premium fallback biography dynamically in French.
+     */
+    private function getMockBio(User $user): string
+    {
+        $institution = $user->profile->institution ?? 'IGA';
+        $location = $user->profile->location;
+        
+        $hasSkills = $user->profile && count($user->profile->skills) > 0;
+        $hasExperiences = $user->profile && count($user->profile->experiences) > 0;
+        $hasCertifications = $user->profile && count($user->profile->certifications) > 0;
+
+        // Determine Headline
+        $headline = "";
+        if ($user->profile && $user->profile->biography) {
+            $bioLines = explode("\n", $user->profile->biography);
+            $headline = trim($bioLines[0]);
+        }
+
+        // Student Role
+        if ($user->role === 'STUDENT') {
+            $field = $user->profile->field;
+            $studyLevel = $user->profile->study_level;
+
+            // Empty Profile Case
+            if (!$hasSkills && !$hasExperiences && !$hasCertifications && !$field && !$studyLevel && !$headline) {
+                $bio = "Actuellement étudiant au sein de l'établissement " . $institution;
+                if ($location) {
+                    $bio .= " à " . $location;
+                }
+                $bio .= ", je suis particulièrement motivé par l'apprentissage et le développement de mes compétences académiques. Rigoureux et curieux, je m'intéresse de près aux nouvelles technologies et aux méthodologies de travail collaboratives. Mon objectif est de m'investir pleinement dans mon parcours d'études tout en préparant mon intégration future dans le monde professionnel par le biais de projets enrichissants.";
+                return $bio;
+            }
+
+            // Normal / Partial Profile Case
+            $introSentence = "Passionné par mes études, je suis actuellement étudiant";
+            if ($studyLevel) {
+                $introSentence .= " en " . $studyLevel;
+            }
+            if ($field) {
+                $introSentence .= " spécialisé en " . $field;
+            }
+            $introSentence .= " à " . $institution;
+            if ($location) {
+                $introSentence .= " (" . $location . ")";
+            }
+            $introSentence .= ". ";
+            $bio = $introSentence;
+
+            if ($headline) {
+                $lowerHeadline = mb_strtolower($headline, 'UTF-8');
+                $isGeneric = str_contains($lowerHeadline, 'étudiant') || 
+                             str_contains($lowerHeadline, 'etudiant') ||
+                             str_contains($lowerHeadline, 'enseignant') || 
+                             str_contains($lowerHeadline, 'chercheur') || 
+                             str_contains($lowerHeadline, 'chez') ||
+                             strlen($headline) < 5;
+                if (!$isGeneric) {
+                    $bio .= "Mon ambition est d'évoluer en tant que " . $headline . ". ";
+                }
+            }
+
+            if ($hasExperiences) {
+                $firstExp = $user->profile->experiences[0];
+                $bio .= "Mon parcours est déjà marqué par des expériences concrètes, notamment en tant que " . $firstExp->title . " chez " . $firstExp->organization . ". ";
+            }
+
+            if ($hasSkills) {
+                $skills = $user->profile->skills->take(4)->pluck('name')->toArray();
+                $bio .= "J'ai développé des compétences clés dans les domaines suivants : " . implode(', ', $skills) . ". ";
+            }
+
+            if ($hasCertifications) {
+                $firstCert = $user->profile->certifications[0];
+                $bio .= "Pour valider mes acquis, j'ai également obtenu la certification " . $firstCert->title . " délivrée par " . $firstCert->issuing_organization . ". ";
+            }
+
+            $bio .= "Je cherche constamment à relever de nouveaux défis académiques et professionnels.";
+            return $bio;
+        }
+
+        // Teacher / Researcher Role
+        $dept = $user->profile->department;
+        $lab = $user->profile->laboratory;
+        $roleLabel = $user->role === 'TEACHER' ? "enseignant" : "chercheur";
+
+        // Empty Profile Case
+        if (!$hasSkills && !$hasExperiences && !$hasCertifications && !$dept && !$lab && !$headline) {
+            $bio = "Actuellement " . $roleLabel . " au sein de l'établissement " . $institution;
+            if ($location) {
+                $bio .= " à " . $location;
+            }
+            $bio .= ", je me consacre pleinement à la transmission des connaissances, à l'encadrement académique et aux activités de recherche. Passionné par l'enseignement et l'évolution des savoirs, je m'efforce de contribuer activement à l'excellence pédagogique et au développement scientifique de notre communauté.";
+            return $bio;
+        }
+
+        // Normal / Partial Profile Case
+        $bio = "En tant qu'" . $roleLabel . " au sein de " . $institution;
+        if ($dept) {
+            $bio .= " dans le département " . $dept;
+        }
+        if ($lab) {
+            $bio .= " et membre du laboratoire " . $lab;
+        }
+        if ($location) {
+            $bio .= " (" . $location . ")";
+        }
+        $bio .= ", je participe activement au développement de projets académiques et scientifiques. ";
+
+        if ($headline) {
+            $lowerHeadline = mb_strtolower($headline, 'UTF-8');
+            $isGeneric = str_contains($lowerHeadline, 'étudiant') || 
+                         str_contains($lowerHeadline, 'etudiant') ||
+                         str_contains($lowerHeadline, 'enseignant') || 
+                         str_contains($lowerHeadline, 'chercheur') || 
+                         str_contains($lowerHeadline, 'chez') ||
+                         strlen($headline) < 5;
+            if (!$isGeneric) {
+                $bio .= "J'exerce principalement en tant que " . $headline . ". ";
+            }
+        }
+
+        if ($hasExperiences) {
+            $firstExp = $user->profile->experiences[0];
+            $bio .= "Mon parcours m'a permis d'occuper le poste de " . $firstExp->title . " au sein de " . $firstExp->organization . ". ";
+        }
+
+        if ($hasSkills) {
+            $skills = $user->profile->skills->take(4)->pluck('name')->toArray();
+            $bio .= "Mes axes d'enseignement et d'expertise technique incluent : " . implode(', ', $skills) . ". ";
+        }
+
+        if ($hasCertifications) {
+            $firstCert = $user->profile->certifications[0];
+            $bio .= "Je suis également certifié " . $firstCert->title . " par " . $firstCert->issuing_organization . ". ";
+        }
+
+        $bio .= "Mon objectif reste de stimuler l'innovation et de guider les étudiants vers la réussite.";
+        return $bio;
     }
 }

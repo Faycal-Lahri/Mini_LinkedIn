@@ -196,31 +196,6 @@ const Login = () => {
                                 )}
                             </button>
                         </form>
-
-                        {/* Divider */}
-                        <div className="relative flex items-center justify-center my-2">
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-black/5" />
-                            </div>
-                            <span className="relative px-3 bg-white text-xs text-[#86868b] font-medium">ou</span>
-                        </div>
-
-                        {/* Social Buttons */}
-                        <div>
-                            {/* Google Button */}
-                            <button
-                                type="button"
-                                className="w-full h-[46px] rounded-full border border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-2.5 text-[14px] font-semibold text-[#1d1d1f] transition-all press-effect bg-white"
-                            >
-                                <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
-                                    <path fill="#EA4335" d="M12 5.04c1.62 0 3.08.56 4.22 1.65l3.15-3.15C17.45 1.84 14.93 1 12 1 7.37 1 3.41 3.66 1.48 7.55l3.77 2.92C6.14 7.51 8.84 5.04 12 5.04z" />
-                                    <path fill="#4285F4" d="M23.49 12.27c0-.82-.07-1.6-.21-2.27H12v4.51h6.46c-.28 1.48-1.12 2.73-2.38 3.58l3.71 2.88c2.16-1.99 3.41-4.92 3.41-8.7z" />
-                                    <path fill="#FBBC05" d="M5.25 14.53c-.24-.72-.37-1.49-.37-2.28s.13-1.56.37-2.28L1.48 7.05C.54 8.94 0 11.07 0 13.33s.54 4.39 1.48 6.28l3.77-2.92c-.24-.72-.37-1.49-.37-2.28z" />
-                                    <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.92l-3.71-2.88c-1.03.69-2.35 1.1-3.96 1.1-3.16 0-5.86-2.47-6.81-5.51l-3.77 2.92C3.41 20.34 7.37 23 12 23z" />
-                                </svg>
-                                Continuer avec Google
-                            </button>
-                        </div>
                     </div>
 
                     {/* Footer link */}

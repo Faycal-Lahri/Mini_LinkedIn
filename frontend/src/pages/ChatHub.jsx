@@ -1,30 +1,41 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../api/axios';
 import useAuthStore from '../store/authStore';
 import Navbar from '../components/Navbar';
 import { BrandLoader } from '../components/Loader';
 import { 
   Send, Paperclip, FileText, ChevronRight, Search, Plus, X, 
-  MessageSquare, FolderGit2, BookOpen, Users, Download, CornerDownRight,
-  Phone, Video, MoreVertical, MessageCircle
+  MessageSquare, FolderGit2, BookOpen, Users, CornerDownRight,
+  MessageCircle, ChevronDown
 } from 'lucide-react';
 
 const STORAGE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-// Helper to format channel time dynamically (no more hardcoded 11:30)
+// Helper to format channel time dynamically
 const formatChannelTime = (timestamp) => {
   if (!timestamp) return '';
   const d = new Date(timestamp);
   const today = new Date();
+  const diffMs = today - d;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+
   if (d.toDateString() === today.toDateString()) {
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (diffMins < 1) return 'À l\'instant';
+    if (diffMins < 60) return `${diffMins}min`;
+    return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   }
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-  if (d.toDateString() === yesterday.toDateString()) {
-    return 'Hier';
-  }
+  if (d.toDateString() === yesterday.toDateString()) return 'Hier';
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+};
+
+// Relative time for message timestamps (like WhatsApp)
+const formatMessageTime = (timestamp) => {
+  if (!timestamp) return '';
+  const d = new Date(timestamp);
+  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 };
 
 // Center Date Dividers like WhatsApp/iMessage
@@ -40,14 +51,16 @@ const DateDivider = ({ date }) => {
   } else if (d.toDateString() === yesterday.toDateString()) {
     dateText = "Hier";
   } else {
-    dateText = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    dateText = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   }
 
   return (
-    <div className="flex justify-center my-4 select-none animate-fadeIn">
-      <span className="bg-black/5 backdrop-blur-md text-[#6e6e73] text-[10px] font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full">
+    <div className="flex items-center justify-center my-5 select-none animate-fadeIn gap-3">
+      <div className="flex-1 h-[1px] bg-black/[0.06]" />
+      <span className="bg-white border border-black/[0.06] text-[#86868b] text-[10px] font-bold uppercase tracking-wider px-3.5 py-1 rounded-full shadow-apple-xs whitespace-nowrap">
         {dateText}
       </span>
+      <div className="flex-1 h-[1px] bg-black/[0.06]" />
     </div>
   );
 };
@@ -275,8 +288,16 @@ function ChatHub() {
   const [allConnections, setAllConnections] = useState([]);
   const [loadingConnections, setLoadingConnections] = useState(false);
   
-  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const fileInputRef = useRef(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+
+  const scrollToBottom = useCallback((behavior = 'smooth') => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+  }, []);
 
   const menuItems = [
     { id: 'private', icon: MessageSquare, label: 'Messages Directs' },
@@ -323,9 +344,31 @@ function ChatHub() {
     return () => clearInterval(interval);
   }, [activeChannel]);
 
+  // Scroll to bottom when messages change (only if already near bottom)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (isAtBottom) {
+      scrollToBottom('smooth');
+    } else {
+      setShowScrollBtn(true);
+    }
+  }, [messages, isAtBottom, scrollToBottom]);
+
+  // Scroll instantly when switching channels
+  useEffect(() => {
+    if (activeChannel) {
+      setIsAtBottom(true);
+      setShowScrollBtn(false);
+      setTimeout(() => scrollToBottom('instant'), 50);
+    }
+  }, [activeChannel?.id, scrollToBottom]);
+
+  const handleScroll = useCallback((e) => {
+    const el = e.target;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distFromBottom < 60;
+    setIsAtBottom(atBottom);
+    setShowScrollBtn(!atBottom);
+  }, []);
 
   const handleSendMessage = async (e, textToSendOverride = null) => {
     if (e) e.preventDefault();
@@ -345,6 +388,9 @@ function ChatHub() {
     };
 
     setMessages(prev => [...prev, tempMessage]);
+    setIsAtBottom(true);
+    setShowScrollBtn(false);
+    setTimeout(() => scrollToBottom('smooth'), 30);
     
     const contentToSend = contentText;
     const fileToSend = attachedFile;
@@ -495,24 +541,95 @@ function ChatHub() {
                 {activeCategory === 'private' && (
                   <p className="px-3 pb-2 text-[9px] font-bold text-[#86868b] uppercase tracking-widest text-left select-none">Récents</p>
                 )}
+                {activeCategory === 'article' && (
+                  <p className="px-3 pb-2 text-[9px] font-bold text-[#86868b] uppercase tracking-widest text-left select-none">{filteredChannels.length} article{filteredChannels.length > 1 ? 's' : ''} scientifique{filteredChannels.length > 1 ? 's' : ''}</p>
+                )}
+
                 {filteredChannels.map(c => {
                   const isActive = activeChannel?.id === c.id;
+                  const isArticle = activeCategory === 'article';
+                  const ap = c.article_post;
+
+                  // ── ARTICLE CARD ──────────────────────────────────────
+                  if (isArticle) {
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => setActiveChannel(c)}
+                        className={`w-full flex gap-3 p-3 rounded-xl transition-all text-left border-none bg-transparent cursor-pointer outline-none focus:outline-none ${
+                          isActive
+                            ? 'bg-[#e8f0fe] border-l-[3px] border-l-[#0071e3] pl-[9.5px]'
+                            : 'hover:bg-black/[0.03]'
+                        }`}
+                      >
+                        {/* Author photo / Avatar */}
+                        <div className="relative flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-gray-100 border border-black/5 flex items-center justify-center font-bold text-[#86868b] overflow-hidden text-xs uppercase shadow-apple-xs">
+                            {ap?.author?.photo_url ? (
+                              <img
+                                src={`${STORAGE}/storage/${ap.author.photo_url}`}
+                                alt=""
+                                className="w-full h-full object-cover"
+                                onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80'; }}
+                              />
+                            ) : ap?.author ? (
+                              <span>{ap.author.first_name[0]}{ap.author.last_name[0]}</span>
+                            ) : (
+                              <BookOpen className="w-5 h-5 text-[#86868b]" />
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex-grow min-w-0">
+                          {/* Article title */}
+                          <p className={`text-[12px] font-bold leading-tight truncate ${
+                            isActive ? 'text-[#0071e3]' : 'text-[#1d1d1f]'
+                          }`}>
+                            {ap?.article_title || c.name}
+                          </p>
+
+                          {/* Journal badge */}
+                          {ap?.journal && (
+                            <p className="text-[9.5px] text-[#5856d6] font-bold truncate mt-0.5 uppercase tracking-wide">
+                              {ap.journal}
+                            </p>
+                          )}
+
+                          {/* Author + last message */}
+                          <p className="text-[10.5px] text-[#86868b] truncate mt-0.5 font-medium">
+                            {c.description
+                              ? c.description
+                              : ap?.author
+                                ? `Par ${ap.author.first_name} ${ap.author.last_name}`
+                                : 'Aucun message'}
+                          </p>
+                        </div>
+
+                        {/* Time */}
+                        <span className="text-[9.5px] text-[#86868b] font-medium shrink-0 mt-0.5">
+                          {formatChannelTime(c.last_message_at || c.updated_at)}
+                        </span>
+                      </button>
+                    );
+                  }
+
+                  // ── DEFAULT CARD (private / global / project) ─────────
                   return (
                     <button
                       key={c.id}
                       onClick={() => setActiveChannel(c)}
                       className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left border-none bg-transparent cursor-pointer relative outline-none focus:outline-none ${
-                        isActive 
-                        ? 'bg-[#e8f0fe] border-l-[3.5px] border-l-[#0071e3] pl-[9.5px]' 
-                        : 'hover:bg-black/[0.03]'
+                        isActive
+                          ? 'bg-[#e8f0fe] border-l-[3.5px] border-l-[#0071e3] pl-[9.5px]'
+                          : 'hover:bg-black/[0.03]'
                       }`}
                     >
                       <div className="relative flex-shrink-0">
                         <div className="w-10 h-10 rounded-full bg-gray-100 border border-black/5 flex items-center justify-center font-bold text-[#86868b] overflow-hidden text-xs uppercase shadow-apple-xs">
                           {c.other_user?.profile?.photo_url ? (
-                            <img 
-                              src={`${STORAGE}/storage/${c.other_user.profile.photo_url}`} 
-                              alt={c.name} 
+                            <img
+                              src={`${STORAGE}/storage/${c.other_user.profile.photo_url}`}
+                              alt={c.name}
                               className="w-full h-full object-cover"
                               onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80'; }}
                             />
@@ -521,22 +638,24 @@ function ChatHub() {
                           )}
                         </div>
                         {activeCategory === 'private' && (
-                          <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#34c759] rounded-full border-2 border-white ring-1 ring-white"></div>
+                          <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#34c759] rounded-full border-2 border-white ring-1 ring-white" />
                         )}
                       </div>
-                      
+
                       <div className="flex-grow min-w-0">
                         <div className="flex justify-between items-center mb-0.5">
                           <span className={`font-bold text-xs truncate ${isActive ? 'text-[#0071e3]' : 'text-black/90'}`}>
                             {c.name}
                           </span>
-                          <span className="text-[9px] text-[#86868b] font-bold uppercase shrink-0">
+                          <span className="text-[10px] text-[#86868b] font-semibold shrink-0">
                             {formatChannelTime(c.updated_at)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <p className={`text-[11.5px] truncate font-medium ${c.unread_count > 0 ? 'text-[#1d1d1f] font-bold' : 'text-[#6e6e73]'}`}>
-                            {c.description || "Cliquez pour démarrer la discussion..."}
+                          <p className={`text-[11.5px] truncate font-medium ${
+                            c.unread_count > 0 ? 'text-[#1d1d1f] font-bold' : 'text-[#6e6e73]'
+                          }`}>
+                            {c.description || 'Cliquez pour démarrer la discussion...'}
                           </p>
                           {c.unread_count > 0 && (
                             <div className="w-4.5 h-4.5 rounded-full bg-[#0071e3] flex items-center justify-center shrink-0 shadow-apple-xs">
@@ -557,122 +676,247 @@ function ChatHub() {
         <main className="flex-grow bg-[#f4f2ee] flex flex-col overflow-hidden relative">
           {activeChannel ? (
             <>
-              {/* Frosted Glass Header */}
-              <header className="h-[56px] px-6 flex items-center justify-between border-b border-black/[0.06] bg-white/90 backdrop-blur-md z-10 text-left">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full border border-black/5 overflow-hidden flex items-center justify-center bg-gray-100 text-xs font-semibold shadow-apple-xs">
-                    {activeChannel.other_user?.profile?.photo_url ? (
-                      <img 
-                        src={`${STORAGE}/storage/${activeChannel.other_user.profile.photo_url}`} 
-                        alt={activeChannel.name} 
-                        className="w-full h-full object-cover"
-                        onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80'; }}
-                      />
-                    ) : (
-                      <span className="material-symbols-outlined text-[#86868b] text-[18px]">person</span>
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-[13.5px] text-[#1d1d1f] leading-none">
-                        {activeChannel.name}
-                      </h3>
-                      {activeChannel.other_user?.role && (
-                        <span className={`text-[8.5px] px-1.5 py-0.2 rounded font-extrabold uppercase tracking-wider ${
-                          activeChannel.other_user.role === 'TEACHER' ? 'bg-[#af52de]/10 text-[#af52de]' :
-                          activeChannel.other_user.role === 'RESEARCHER' ? 'bg-[#0071e3]/10 text-[#0071e3]' :
-                          'bg-[#34c759]/10 text-[#34c759]'
-                        }`}>
-                          {activeChannel.other_user.role === 'TEACHER' ? 'Enseignant' : activeChannel.other_user.role === 'RESEARCHER' ? 'Chercheur' : 'Étudiant'}
-                        </span>
+              {/* Header — adapts to channel type */}
+              {activeChannel.type === 'ARTICLE' && activeChannel.article_post ? (
+                // ── ARTICLE HEADER ───────────────────────────────────────
+                <header className="px-5 py-3 border-b border-black/[0.06] bg-white/95 backdrop-blur-md z-10">
+                  <div className="flex items-start gap-3">
+                    {/* Author photo / Avatar */}
+                    <div className="w-10 h-10 rounded-full border border-black/5 overflow-hidden bg-gray-100 flex items-center justify-center font-bold text-[#86868b] text-xs uppercase shadow-apple-sm flex-shrink-0">
+                      {activeChannel.article_post.author?.photo_url ? (
+                        <img
+                          src={`${STORAGE}/storage/${activeChannel.article_post.author.photo_url}`}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80'; }}
+                        />
+                      ) : activeChannel.article_post.author ? (
+                        <span>{activeChannel.article_post.author.first_name[0]}{activeChannel.article_post.author.last_name[0]}</span>
+                      ) : (
+                        <BookOpen className="w-5 h-5 text-gray-400" />
                       )}
                     </div>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <span className="w-1.5 h-1.5 bg-[#34c759] rounded-full animate-pulse"></span>
-                      <span className="text-[9px] font-bold text-[#34c759] uppercase tracking-wider">Actif maintenant</span>
+
+                    <div className="flex-grow min-w-0">
+                      {/* Title */}
+                      <h3 className="font-bold text-[13px] text-[#1d1d1f] leading-snug line-clamp-2">
+                        {activeChannel.article_post.article_title || activeChannel.name}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
+                        {/* Journal */}
+                        {activeChannel.article_post.journal && (
+                          <span className="text-[10px] font-bold text-[#5856d6] uppercase tracking-wide">
+                            {activeChannel.article_post.journal}
+                          </span>
+                        )}
+                        {/* Author */}
+                        {activeChannel.article_post.author && (
+                          <span className="text-[10.5px] text-[#86868b] font-medium">
+                            {activeChannel.article_post.author.first_name} {activeChannel.article_post.author.last_name}
+                          </span>
+                        )}
+                        {/* DOI */}
+                        {activeChannel.article_post.doi && (
+                          <a
+                            href={`https://doi.org/${activeChannel.article_post.doi}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[9.5px] text-[#0071e3] font-bold hover:underline uppercase tracking-wide"
+                          >
+                            DOI ↗
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </header>
+              ) : (
+                // ── DEFAULT HEADER (Private / Global / Project) ──────────
+                <header className="h-[56px] px-6 flex items-center justify-between border-b border-black/[0.06] bg-white/90 backdrop-blur-md z-10 text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full border border-black/5 overflow-hidden flex items-center justify-center bg-gray-100 text-xs font-semibold shadow-apple-xs">
+                      {activeChannel.other_user?.profile?.photo_url ? (
+                        <img
+                          src={`${STORAGE}/storage/${activeChannel.other_user.profile.photo_url}`}
+                          alt={activeChannel.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80'; }}
+                        />
+                      ) : (
+                        <span className="text-[#86868b] font-bold text-sm">{activeChannel.name?.charAt(0)}</span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-[13.5px] text-[#1d1d1f] leading-none">
+                          {activeChannel.name}
+                        </h3>
+                        {activeChannel.other_user?.role && (
+                          <span className={`text-[8.5px] px-1.5 py-0.5 rounded font-extrabold uppercase tracking-wider ${
+                            activeChannel.other_user.role === 'TEACHER'    ? 'bg-[#af52de]/10 text-[#af52de]' :
+                            activeChannel.other_user.role === 'RESEARCHER' ? 'bg-[#0071e3]/10 text-[#0071e3]' :
+                            'bg-[#34c759]/10 text-[#34c759]'
+                          }`}>
+                            {activeChannel.other_user.role === 'TEACHER' ? 'Enseignant' :
+                             activeChannel.other_user.role === 'RESEARCHER' ? 'Chercheur' : 'Étudiant'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="w-1.5 h-1.5 bg-[#34c759] rounded-full animate-pulse" />
+                        <span className="text-[9px] font-bold text-[#34c759] uppercase tracking-wider">Actif maintenant</span>
+                      </div>
+                    </div>
+                  </div>
+                </header>
+              )}
 
-                {/* Simulated Call / Option triggers */}
-                <div className="flex items-center gap-1 text-gray-500">
-                  <button className="p-1.5 hover:bg-black/[0.04] rounded-full transition-colors border-none bg-transparent cursor-pointer text-gray-600"><Phone className="w-4 h-4" /></button>
-                  <button className="p-1.5 hover:bg-black/[0.04] rounded-full transition-colors border-none bg-transparent cursor-pointer text-gray-600"><Video className="w-4 h-4" /></button>
-                  <button className="p-1.5 hover:bg-black/[0.04] rounded-full transition-colors border-none bg-transparent cursor-pointer text-gray-600"><MoreVertical className="w-4 h-4" /></button>
+              {/* Abstract banner — shown for article channels */}
+              {activeChannel.type === 'ARTICLE' && activeChannel.article_post?.abstract && (
+                <div className="px-5 py-3 bg-[#f5f5f7] border-b border-black/[0.05] text-left">
+                  <p className="text-[9px] font-bold text-[#86868b] uppercase tracking-widest mb-1">Résumé de l&apos;article</p>
+                  <p className="text-[11.5px] text-[#48484a] font-medium leading-relaxed line-clamp-3">
+                    {activeChannel.article_post.abstract}
+                  </p>
+                  {activeChannel.article_post.keywords && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {activeChannel.article_post.keywords.split(',').slice(0, 5).map((kw, i) => (
+                        <span key={i} className="text-[9px] bg-[#0071e3]/8 text-[#0071e3] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide border border-[#0071e3]/12">
+                          {kw.trim()}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </header>
+              )}
 
-              {/* Messages Space */}
-              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3.5 flex flex-col no-scrollbar bg-[#f4f2ee]">
+              {/* Messages Space — scrollable container */}
+              <div 
+                ref={messagesContainerRef}
+                onScroll={handleScroll}
+                className="flex-1 overflow-y-auto px-6 py-4 no-scrollbar bg-[#f4f2ee] relative"
+                style={{ scrollBehavior: 'auto' }}
+              >
                 {messages.length === 0 ? (
-                  <div className="flex-1 flex flex-col items-center justify-center opacity-30 select-none">
-                    <MessageCircle className="w-12 h-12 mb-2 text-gray-400" />
-                    <p className="font-bold uppercase tracking-wider text-xs">Début de la conversation</p>
+                  <div className="h-full flex flex-col items-center justify-center select-none opacity-40">
+                    {activeChannel.type === 'ARTICLE' ? (
+                      <>
+                        <div className="w-14 h-14 bg-gradient-to-br from-[#0071e3] to-[#5856d6] rounded-2xl flex items-center justify-center mb-4 shadow-apple-md">
+                          <BookOpen className="w-7 h-7 text-white" />
+                        </div>
+                        <p className="font-bold text-[13px] text-[#1d1d1f]">Aucun commentaire pour l&apos;instant</p>
+                        <p className="text-[11px] text-[#86868b] mt-1 font-medium">Soyez le premier à discuter de cet article !</p>
+                      </>
+                    ) : (
+                      <>
+                        <MessageCircle className="w-12 h-12 mb-3 text-gray-300" />
+                        <p className="font-bold uppercase tracking-wider text-xs text-gray-400">Début de la conversation</p>
+                      </>
+                    )}
                   </div>
                 ) : (
-                  messages.map((m, idx) => {
-                    const isMe = m.sender?.id === user?.id;
-                    const prevMessage = idx > 0 ? messages[idx - 1] : null;
-                    
-                    // Grouping logic: hide redundant avatars/labels for consecutive messages
-                    const isConsecutive = prevMessage && prevMessage.sender?.id === m.sender?.id && 
-                      (new Date(m.created_at) - new Date(prevMessage.created_at) < 2 * 60 * 1000);
-                    
-                    const showAvatar = !isMe && !isConsecutive;
+                  <div className="flex flex-col space-y-0.5 min-h-full justify-end">
+                    {messages.map((m, idx) => {
+                      const isMe = m.sender?.id === user?.id;
+                      const prevMessage = idx > 0 ? messages[idx - 1] : null;
+                      const nextMessage = idx < messages.length - 1 ? messages[idx + 1] : null;
+                      const isLast = idx === messages.length - 1;
 
-                    return (
-                      <React.Fragment key={m.id}>
-                        {/* Conditional Date Divider */}
-                        {renderDateDivider(m, prevMessage)}
+                      // Grouping: consecutive messages from same sender within 2 min
+                      const isConsecutive = prevMessage &&
+                        prevMessage.sender?.id === m.sender?.id &&
+                        (new Date(m.created_at) - new Date(prevMessage.created_at) < 2 * 60 * 1000);
 
-                        <div className={`flex items-start gap-2.5 ${isMe ? 'flex-row-reverse self-end' : 'self-start'} ${isConsecutive ? 'mt-0.5' : 'mt-3'} animate-fadeInUp`}>
-                          {!isMe && (
-                            <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-black/5 bg-[#f5f5f7] flex items-center justify-center text-[10px] font-bold shadow-apple-xs">
-                              {showAvatar ? (
-                                <div className="w-full h-full bg-white flex items-center justify-center">
-                                  {m.sender?.profile?.photo_url ? (
-                                    <img src={`${STORAGE}/storage/${m.sender.profile.photo_url}`} className="w-full h-full object-cover" onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80'; }} alt="" />
+                      // Show timestamp below last message of a group
+                      const isLastInGroup = !nextMessage ||
+                        nextMessage.sender?.id !== m.sender?.id ||
+                        (new Date(nextMessage.created_at) - new Date(m.created_at) >= 2 * 60 * 1000);
+
+                      const showAvatar = !isMe && !isConsecutive;
+
+                      return (
+                        <React.Fragment key={m.id}>
+                          {/* Date Divider */}
+                          {renderDateDivider(m, prevMessage)}
+
+                          <div className={`flex items-end gap-2 ${
+                            isMe ? 'flex-row-reverse justify-start' : 'justify-start'
+                          } ${isConsecutive ? 'mt-0.5' : 'mt-4'} animate-fadeInUp`}>
+
+                            {/* Avatar (other user) */}
+                            {!isMe && (
+                              <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 border border-black/5 bg-[#f5f5f7] flex items-center justify-center text-[10px] font-bold">
+                                {showAvatar ? (
+                                  m.sender?.profile?.photo_url ? (
+                                    <img
+                                      src={`${STORAGE}/storage/${m.sender.profile.photo_url}`}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80'; }}
+                                      alt=""
+                                    />
                                   ) : (
-                                    <div className="w-full h-full text-gray-400 font-bold flex items-center justify-center uppercase">{m.sender?.first_name?.charAt(0)}</div>
+                                    <span className="text-[#86868b] uppercase">{m.sender?.first_name?.charAt(0)}</span>
+                                  )
+                                ) : (
+                                  <div className="opacity-0 w-full h-full" />
+                                )}
+                              </div>
+                            )}
+
+                            <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[68%]`}>
+                              {/* Sender name (first of group, not me) */}
+                              {!isMe && !isConsecutive && (
+                                <span className="text-[10px] font-bold text-[#86868b] mb-1 ml-1 tracking-tight">
+                                  {m.sender?.first_name} {m.sender?.last_name}
+                                </span>
+                              )}
+
+                              {/* Bubble */}
+                              <div className={`px-4 py-2.5 shadow-apple-xs transition-all ${
+                                isMe
+                                  ? 'bg-[#0071e3] text-white rounded-[20px] rounded-br-[5px]'
+                                  : 'bg-white text-[#1d1d1f] border border-black/[0.06] rounded-[20px] rounded-tl-[5px]'
+                              }`}>
+                                {m.content && m.content.trim() !== '' && (
+                                  <p className="text-[13.5px] font-[450] leading-[1.5]">
+                                    {renderMessageContent(m.content, isMe)}
+                                  </p>
+                                )}
+                                {renderAttachment(m.file_url, m.content, isMe)}
+                              </div>
+
+                              {/* Timestamp — shown below last bubble of a group */}
+                              {isLastInGroup && (
+                                <div className={`flex items-center gap-1 mt-1 px-1 ${ isMe ? 'flex-row-reverse' : '' }`}>
+                                  <span className="text-[10px] text-[#86868b] font-medium">
+                                    {formatMessageTime(m.created_at)}
+                                  </span>
+                                  {isMe && isLast && (
+                                    <span className="text-[9px] text-[#34c759] font-bold uppercase tracking-wide">✓ Envoyé</span>
                                   )}
                                 </div>
-                              ) : (
-                                <div className="w-full h-full opacity-0" />
                               )}
                             </div>
-                          )}
-
-                          <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[70%]`}>
-                            {/* Bubble Card with Apple iMessage curves */}
-                            <div className={`px-4 py-2.5 text-xs font-semibold leading-relaxed shadow-apple-xs ${
-                              isMe 
-                              ? 'bg-[#0071e3] text-white rounded-[18px] rounded-br-[4px]' 
-                              : 'bg-white text-black/90 border border-black/5 rounded-[18px] rounded-tl-[4px]'
-                            }`}>
-                              {m.content && m.content.trim() !== '' && (
-                                <p className="text-[13px] font-medium leading-relaxed">
-                                  {renderMessageContent(m.content, isMe)}
-                                </p>
-                              )}
-                              
-                              {/* Attachment preview */}
-                              {renderAttachment(m.file_url, m.content, isMe)}
-                            </div>
-
-                            {/* Small timestamp below only on last bubble of sequence */}
-                            {(!prevMessage || idx === messages.length - 1 || messages[idx + 1]?.sender?.id !== m.sender?.id) && (
-                              <span className="text-[9px] font-bold text-gray-400 mt-1 px-1 uppercase tracking-wider">
-                                {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            )}
                           </div>
-                        </div>
-                      </React.Fragment>
-                    );
-                  })
+                        </React.Fragment>
+                      );
+                    })}
+                    {/* Anchor for scroll */}
+                    <div id="chat-end" style={{ height: 1 }} />
+                  </div>
                 )}
-                <div ref={messagesEndRef} />
               </div>
+
+              {/* Floating scroll-to-bottom button */}
+              {showScrollBtn && (
+                <button
+                  onClick={() => { setIsAtBottom(true); setShowScrollBtn(false); scrollToBottom('smooth'); }}
+                  className="absolute bottom-[140px] right-6 w-9 h-9 bg-white border border-black/[0.08] rounded-full shadow-apple-md flex items-center justify-center text-[#0071e3] hover:bg-[#f5f5f7] transition-all cursor-pointer z-20 animate-fadeIn"
+                  title="Aller au dernier message"
+                >
+                  <ChevronDown className="w-5 h-5" />
+                </button>
+              )}
 
               {/* Suggestions Quick Replies (LinkedIn/Apple Premium Style) */}
               <div className="px-4 py-1.5 flex gap-1.5 overflow-x-auto bg-transparent scrollbar-none select-none">

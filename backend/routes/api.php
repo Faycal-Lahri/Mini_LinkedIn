@@ -18,6 +18,8 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ai/assist-post', [AiController::class, 'assistPost']);
+    Route::post('/ai/analyze-pdf', [AiController::class, 'analyzeArticlePdf']);
+    Route::get('/ai/connections', [AiController::class, 'connectionSuggestions']);
     Route::get('/user', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -74,6 +76,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/users/{user}/reject', [AdminController::class, 'rejectUser']);
         Route::post('/users/{user}/toggle-status', [AdminController::class, 'toggleUserStatus']);
         Route::delete('/users/{user}', [AdminController::class, 'deleteUser']);
+        Route::put('/users/{user}', [AdminController::class, 'updateUser']);
         Route::patch('/users/{user}/role', [AdminController::class, 'changeUserRole']);
         Route::post('/users/{user}/warn', [AdminController::class, 'sendWarning']);
         Route::post('/users/{user}/ban', [AdminController::class, 'banUser']);
@@ -81,6 +84,8 @@ Route::middleware('auth:sanctum')->group(function () {
         // Post Moderation
         Route::get('/posts', [AdminController::class, 'getAllPosts']);
         Route::delete('/posts/{post}', [AdminController::class, 'deletePost']);
+        Route::put('/posts/{post}', [AdminController::class, 'updatePost']);
+        Route::delete('/comments/{comment}', [AdminController::class, 'deleteComment']);
 
         // Reports
         Route::get('/reports', [AdminController::class, 'getReports']);
