@@ -102,20 +102,22 @@ const ReactionsListModal = ({ isOpen, onClose, likes = [] }) => {
                     style={{ textDecoration: 'none' }}
                   >
                     {/* User Avatar */}
-                    <div className="h-[46px] w-[46px] rounded-full bg-[#f5f5f7] overflow-hidden flex-shrink-0 border border-black/5 relative">
-                      {u.profile?.photo_url ? (
-                        <img 
-                          src={`${API_URL}/storage/${u.profile.photo_url}`} 
-                          className="w-full h-full object-cover" 
-                          alt=""
-                          onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80'; }} 
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-[#f5f5f7] flex items-center justify-center text-sm font-bold text-[#86868b]">
-                          {u.first_name[0]}{u.last_name[0]}
-                        </div>
-                      )}
-                      {/* Sub-Reaction badge inside avatar */}
+                    <div className="relative flex-shrink-0">
+                      <div className="h-[46px] w-[46px] rounded-full bg-[#f5f5f7] overflow-hidden border border-black/5 flex items-center justify-center">
+                        {u.profile?.photo_url ? (
+                          <img 
+                            src={`${API_URL}/storage/${u.profile.photo_url}`} 
+                            className="w-full h-full object-cover" 
+                            alt=""
+                            onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&q=80'; }} 
+                          />
+                        ) : (
+                          <span className="text-sm font-bold text-[#86868b]">
+                            {u.first_name[0]}{u.last_name[0]}
+                          </span>
+                        )}
+                      </div>
+                      {/* Sub-Reaction badge outside the overflow-hidden wrapper */}
                       <span className="absolute -bottom-0.5 -right-0.5 bg-white rounded-full shadow-apple-xs w-5 h-5 flex items-center justify-center border border-black/5 ring-2 ring-white z-10">
                         <ReactionIcon type={like.type} className="w-[12px] h-[12px]" />
                       </span>

@@ -53,7 +53,7 @@ function AppContent() {
         <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><Admin /></ProtectedRoute>} />
 
         {/* Redirects */}
-        <Route path="/" element={<Navigate to="/feed" replace />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/feed" replace />} />
       </Routes>
     </>

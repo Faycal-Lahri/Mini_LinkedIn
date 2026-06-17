@@ -1294,12 +1294,14 @@ const Navbar = () => {
                           onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                         >
                           {/* Avatar with active green dot */}
-                          <div style={{ position: 'relative', width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', background: '#e8e8ed', flexShrink: 0, border: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {otherUserAvatar ? (
-                              <img src={otherUserAvatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : (
-                              <span style={{ fontSize: 11, fontWeight: 700, color: '#86868b' }}>{otherUserInitials}</span>
-                            )}
+                          <div style={{ position: 'relative', width: 34, height: 34, flexShrink: 0 }}>
+                            <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: '#e8e8ed', border: '1px solid rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {otherUserAvatar ? (
+                                <img src={otherUserAvatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                <span style={{ fontSize: 11, fontWeight: 700, color: '#86868b' }}>{otherUserInitials}</span>
+                              )}
+                            </div>
                             <span 
                               style={{
                                 position: 'absolute',
