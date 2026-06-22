@@ -25,20 +25,23 @@ class ChatController extends Controller
             ]);
         }
 
-        $global = Channel::where('type', 'GLOBAL')->get()->map(function($c) {
-            $lastMsg = $c->messages()->latest()->first();
-            if ($lastMsg) {
-                $c->description = $lastMsg->content ? $lastMsg->content : ($lastMsg->file_url ? '📁 Pièce jointe' : '');
-                $c->last_message = $lastMsg;
-            }
-            return $c;
-        });
+        $global = Channel::where('type', 'GLOBAL')
+            ->with(['latestMessage'])
+            ->get()
+            ->map(function($c) {
+                $lastMsg = $c->latestMessage;
+                if ($lastMsg) {
+                    $c->description = $lastMsg->content ? $lastMsg->content : ($lastMsg->file_url ? '📁 Pièce jointe' : '');
+                    $c->last_message = $lastMsg;
+                }
+                return $c;
+            });
 
         $private = Channel::where('type', 'PRIVATE')
             ->where(function ($q) use ($userId) {
                 $q->where('user1_id', $userId)->orWhere('user2_id', $userId);
             })
-            ->with(['user1.profile', 'user2.profile'])
+            ->with(['user1.profile', 'user2.profile', 'latestMessage'])
             ->get()
             ->map(function($c) use ($userId) {
                 // Determine the other user for the UI
@@ -46,7 +49,7 @@ class ChatController extends Controller
                 $c->name = $otherUser->first_name . ' ' . $otherUser->last_name;
                 $c->other_user = $otherUser;
                 
-                $lastMsg = $c->messages()->latest()->first();
+                $lastMsg = $c->latestMessage;
                 if ($lastMsg) {
                     $c->description = $lastMsg->content ? $lastMsg->content : ($lastMsg->file_url ? '📁 Pièce jointe' : '');
                     $c->last_message = $lastMsg;
@@ -59,27 +62,32 @@ class ChatController extends Controller
             ->pluck('project_id');
 
         // Ensure Project channels exist for these memberships
-        foreach ($projectIds as $pId) {
-            $exists = Channel::where('type', 'PROJECT')->where('project_id', $pId)->exists();
-            if (!$exists) {
-                $project = \App\Models\Project::find($pId);
-                if ($project) {
-                    Channel::create([
-                        'name' => 'Projet: ' . $project->title,
-                        'slug' => 'project-' . $project->id,
-                        'type' => 'PROJECT',
-                        'project_id' => $project->id,
-                        'description' => 'Espace de travail pour ' . $project->title
-                    ]);
+        if ($projectIds->isNotEmpty()) {
+            $existingProjChannels = Channel::where('type', 'PROJECT')->whereIn('project_id', $projectIds)->get()->keyBy('project_id');
+            $missingProjIds = $projectIds->diff($existingProjChannels->keys());
+            if ($missingProjIds->isNotEmpty()) {
+                $projects = \App\Models\Project::whereIn('id', $missingProjIds)->get()->keyBy('id');
+                foreach ($missingProjIds as $pId) {
+                    $project = $projects->get($pId);
+                    if ($project) {
+                        Channel::create([
+                            'name' => 'Projet: ' . $project->title,
+                            'slug' => 'project-' . $project->id,
+                            'type' => 'PROJECT',
+                            'project_id' => $project->id,
+                            'description' => 'Espace de travail pour ' . $project->title
+                        ]);
+                    }
                 }
             }
         }
 
         $project = Channel::where('type', 'PROJECT')
             ->whereIn('project_id', $projectIds)
+            ->with(['latestMessage'])
             ->get()
             ->map(function($c) {
-                $lastMsg = $c->messages()->latest()->first();
+                $lastMsg = $c->latestMessage;
                 if ($lastMsg) {
                     $c->description = $lastMsg->content ? $lastMsg->content : ($lastMsg->file_url ? '📁 Pièce jointe' : '');
                     $c->last_message = $lastMsg;
@@ -88,60 +96,62 @@ class ChatController extends Controller
             });
 
         $articlePosts = \App\Models\Post::where('type', 'SCIENTIFIC_ARTICLE')->latest()->limit(20)->get();
-        foreach ($articlePosts as $post) {
-            $exists = Channel::where('type', 'ARTICLE')->where('post_id', $post->id)->exists();
-            if (!$exists) {
-                $channelTitle = $post->article_title ?: ($post->title ?: substr($post->abstract ?: $post->content, 0, 40));
-                Channel::create([
-                    'name'        => $channelTitle,
-                    'slug'        => 'article-' . $post->id,
-                    'type'        => 'ARTICLE',
-                    'post_id'     => $post->id,
-                    'description' => $post->journal ?? 'Article scientifique',
-                ]);
-            } else {
-                // Update existing channels that still have the old bad name
-                $existingChannel = Channel::where('type', 'ARTICLE')->where('post_id', $post->id)->first();
-                if ($existingChannel && str_starts_with($existingChannel->name, 'Article: ')) {
-                    $channelTitle = $post->article_title ?: ($post->title ?: substr($post->abstract ?: $post->content, 0, 40));
-                    $existingChannel->update([
+        if ($articlePosts->isNotEmpty()) {
+            $postIds = $articlePosts->pluck('id')->toArray();
+            $existingChannels = Channel::where('type', 'ARTICLE')->whereIn('post_id', $postIds)->get()->keyBy('post_id');
+
+            foreach ($articlePosts as $post) {
+                $existingChannel = $existingChannels->get($post->id);
+                if (!$existingChannel) {
+                    $channelTitle = $post->article_title ?: ($post->title ?: mb_substr($post->abstract ?: $post->content, 0, 40));
+                    Channel::create([
                         'name'        => $channelTitle,
+                        'slug'        => 'article-' . $post->id,
+                        'type'        => 'ARTICLE',
+                        'post_id'     => $post->id,
                         'description' => $post->journal ?? 'Article scientifique',
                     ]);
+                } else {
+                    if (str_starts_with($existingChannel->name, 'Article: ')) {
+                        $channelTitle = $post->article_title ?: ($post->title ?: mb_substr($post->abstract ?: $post->content, 0, 40));
+                        $existingChannel->update([
+                            'name'        => $channelTitle,
+                            'description' => $post->journal ?? 'Article scientifique',
+                        ]);
+                    }
                 }
             }
         }
 
         $article = Channel::where('type', 'ARTICLE')
+            ->with(['post.author.profile', 'latestMessage.sender'])
             ->get()
             ->map(function($c) {
                 // Load the full post with its author for article metadata
-                if ($c->post_id) {
-                    $post = \App\Models\Post::with('author.profile')->find($c->post_id);
-                    if ($post) {
-                        $c->article_post = [
-                            'id'            => $post->id,
-                            'article_title' => $post->article_title,
-                            'journal'       => $post->journal,
-                            'doi'           => $post->doi,
-                            'keywords'      => $post->keywords,
-                            'abstract'      => $post->abstract,
-                            'author'        => $post->author ? [
-                                'id'         => $post->author->id,
-                                'first_name' => $post->author->first_name,
-                                'last_name'  => $post->author->last_name,
-                                'role'       => $post->author->role,
-                                'photo_url'  => $post->author->profile?->photo_url,
-                            ] : null,
-                        ];
-                        // Use article_title as the channel display name
-                        if ($post->article_title) {
-                            $c->name = $post->article_title;
-                        }
+                $post = $c->post;
+                if ($post) {
+                    $c->article_post = [
+                        'id'            => $post->id,
+                        'article_title' => $post->article_title,
+                        'journal'       => $post->journal,
+                        'doi'           => $post->doi,
+                        'keywords'      => $post->keywords,
+                        'abstract'      => $post->abstract,
+                        'author'        => $post->author ? [
+                            'id'         => $post->author->id,
+                            'first_name' => $post->author->first_name,
+                            'last_name'  => $post->author->last_name,
+                            'role'       => $post->author->role,
+                            'photo_url'  => $post->author->profile?->photo_url,
+                        ] : null,
+                    ];
+                    // Use article_title as the channel display name
+                    if ($post->article_title) {
+                        $c->name = $post->article_title;
                     }
                 }
 
-                $lastMsg = $c->messages()->with('sender')->latest()->first();
+                $lastMsg = $c->latestMessage;
                 if ($lastMsg) {
                     $c->description = $lastMsg->content ?: ($lastMsg->file_url ? '📁 Pièce jointe' : '');
                     $c->last_message_at = $lastMsg->created_at;

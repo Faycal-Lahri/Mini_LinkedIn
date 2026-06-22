@@ -19,19 +19,27 @@ class NetworkController extends Controller
             ->with(['profile'])
             ->get();
 
-        // Attach connection status
-        $users->each(function ($u) use ($userId) {
-            $connection = \App\Models\Connection::where(function($q) use ($userId, $u) {
-                $q->where('sender_id', $userId)->where('receiver_id', $u->id);
-            })->orWhere(function($q) use ($userId, $u) {
-                $q->where('sender_id', $u->id)->where('receiver_id', $userId);
-            })->first();
+        // Fetch all connections of the current user in one query
+        $connections = \App\Models\Connection::where(function($q) use ($userId) {
+            $q->where('sender_id', $userId)->orWhere('receiver_id', $userId);
+        })->get();
 
-            if (!$connection) {
-                $u->connection_status = 'NONE';
-            } else {
+        // Map connections by the other user's ID for O(1) in-memory lookup
+        $connectionMap = [];
+        foreach ($connections as $c) {
+            $key = $c->sender_id === $userId ? $c->receiver_id : $c->sender_id;
+            $connectionMap[$key] = $c;
+        }
+
+        // Attach connection status from memory (No N+1 queries!)
+        $users->each(function ($u) use ($connectionMap, $userId) {
+            if (isset($connectionMap[$u->id])) {
+                $connection = $connectionMap[$u->id];
                 $u->connection_status = $connection->status;
                 $u->is_sender = $connection->sender_id === $userId;
+            } else {
+                $u->connection_status = 'NONE';
+                $u->is_sender = false;
             }
         });
 
@@ -57,14 +65,30 @@ class NetworkController extends Controller
             ->with('profile')
             ->get();
 
-        $users->each(function ($u) use ($userId) {
-            $connection = \App\Models\Connection::where(function($q) use ($userId, $u) {
-                $q->where('sender_id', $userId)->where('receiver_id', $u->id);
-            })->orWhere(function($q) use ($userId, $u) {
-                $q->where('sender_id', $u->id)->where('receiver_id', $userId);
-            })->first();
+        // Fetch all connections between current user and the found users in one query
+        $foundUserIds = $users->pluck('id')->toArray();
+        $connections = \App\Models\Connection::where(function($q) use ($userId, $foundUserIds) {
+            $q->where('sender_id', $userId)->whereIn('receiver_id', $foundUserIds);
+        })->orWhere(function($q) use ($userId, $foundUserIds) {
+            $q->whereIn('sender_id', $foundUserIds)->where('receiver_id', $userId);
+        })->get();
 
-            $u->connection_status = $connection ? $connection->status : 'NONE';
+        // Map connections by the other user's ID for O(1) in-memory lookup
+        $connectionMap = [];
+        foreach ($connections as $c) {
+            $key = $c->sender_id === $userId ? $c->receiver_id : $c->sender_id;
+            $connectionMap[$key] = $c;
+        }
+
+        $users->each(function ($u) use ($connectionMap, $userId) {
+            if (isset($connectionMap[$u->id])) {
+                $connection = $connectionMap[$u->id];
+                $u->connection_status = $connection->status;
+                $u->is_sender = $connection->sender_id === $userId;
+            } else {
+                $u->connection_status = 'NONE';
+                $u->is_sender = false;
+            }
         });
 
         return response()->json($users);

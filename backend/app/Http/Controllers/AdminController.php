@@ -168,7 +168,7 @@ class AdminController extends Controller
             ->take(5)
             ->values()
             ->map(fn($p) => [
-                'title' => $p->title ?? substr($p->content, 0, 30),
+                'title' => $p->title ?? mb_substr($p->content, 0, 30),
                 'author' => $p->author ? "{$p->author->first_name} {$p->author->last_name}" : 'Inconnu',
                 'likes' => $p->likes_count,
                 'comments' => $p->comments_count,
@@ -219,7 +219,7 @@ class AdminController extends Controller
             ->map(fn($c) => [
                 'author' => $c->author ? "{$c->author->first_name} {$c->author->last_name}" : 'N/A',
                 'post_title' => $c->post->title ?? 'Post #' . $c->post_id,
-                'content' => substr($c->content, 0, 45) . '...',
+                'content' => mb_substr($c->content, 0, 45) . '...',
                 'created_at' => $c->created_at->toIso8601String(),
             ]);
 
@@ -250,7 +250,7 @@ class AdminController extends Controller
         ]);
         $recentPostsAct = Post::with('author')->latest()->limit(5)->get()->map(fn($p) => [
             'type'        => 'NEW_POST',
-            'description' => "Publication par " . ($p->author ? "{$p->author->first_name}" : "Membre") . " : " . substr($p->content, 0, 40) . "...",
+            'description' => "Publication par " . ($p->author ? "{$p->author->first_name}" : "Membre") . " : " . mb_substr($p->content, 0, 40) . "...",
             'timestamp'   => $p->created_at->toIso8601String(),
         ]);
         $recentActivitiesList = $recentUsersAct->concat($recentPostsAct)->sortByDesc('timestamp')->values()->take(5);
@@ -262,8 +262,8 @@ class AdminController extends Controller
             ->limit(5)
             ->get()
             ->map(fn($p) => [
-                'author' => "{$p->author->first_name} {$p->author->last_name}",
-                'content' => substr($p->content, 0, 50) . '...',
+                'author' => $p->author ? "{$p->author->first_name} {$p->author->last_name}" : 'Membre',
+                'content' => mb_substr($p->content, 0, 50) . '...',
                 'date' => $p->created_at->toIso8601String(),
             ]);
 
@@ -294,7 +294,7 @@ class AdminController extends Controller
         $postsWithFiles = Post::with('author')->whereNotNull('file_url')->latest()->limit(3)->get();
         foreach ($postsWithFiles as $p) {
             $uploadedFilesList[] = [
-                'name' => 'Fichier Post : ' . "{$p->author->first_name} {$p->author->last_name}",
+                'name' => 'Fichier Post : ' . ($p->author ? "{$p->author->first_name} {$p->author->last_name}" : 'Membre'),
                 'url' => $p->file_url,
                 'type' => 'Média'
             ];
@@ -302,33 +302,37 @@ class AdminController extends Controller
         $uploadedFilesList = array_slice($uploadedFilesList, 0, 5);
 
         // 4. Candidats à l'avertissement (les plus signalés)
-        $warningCandidates = Report::groupBy('reported_id')
+        $warningCandidatesData = Report::groupBy('reported_id')
             ->selectRaw('reported_id, count(*) as count')
             ->latest()
             ->limit(5)
-            ->get()
-            ->map(function($r) {
-                $u = User::find($r->reported_id);
-                return [
-                    'name' => $u ? "{$u->first_name} {$u->last_name}" : "Contenu #{$r->reported_id}",
-                    'count' => $r->count
-                ];
-            });
+            ->get();
+        $warningUserIds = $warningCandidatesData->pluck('reported_id')->filter()->toArray();
+        $warningUsers = User::whereIn('id', $warningUserIds)->get()->keyBy('id');
+        $warningCandidates = $warningCandidatesData->map(function($r) use ($warningUsers) {
+            $u = $warningUsers->get($r->reported_id);
+            return [
+                'name' => $u ? "{$u->first_name} {$u->last_name}" : "Contenu #{$r->reported_id}",
+                'count' => $r->count
+            ];
+        });
 
         // 5. Leaders de réseau (utilisateurs les plus connectés)
-        $networkLeaders = Connection::where('status', 'ACCEPTED')
+        $networkLeadersData = Connection::where('status', 'ACCEPTED')
             ->selectRaw('sender_id as user_id, count(*) as count')
             ->groupBy('sender_id')
             ->orderBy('count', 'desc')
             ->limit(5)
-            ->get()
-            ->map(function($c) {
-                $u = User::find($c->user_id);
-                return [
-                    'name' => $u ? "{$u->first_name} {$u->last_name}" : 'Utilisateur',
-                    'count' => $c->count
-                ];
-            });
+            ->get();
+        $leaderUserIds = $networkLeadersData->pluck('user_id')->filter()->toArray();
+        $leaderUsers = User::whereIn('id', $leaderUserIds)->get()->keyBy('id');
+        $networkLeaders = $networkLeadersData->map(function($c) use ($leaderUsers) {
+            $u = $leaderUsers->get($c->user_id);
+            return [
+                'name' => $u ? "{$u->first_name} {$u->last_name}" : 'Utilisateur',
+                'count' => $c->count
+            ];
+        });
 
         // 6. Mots-clés populaires
         $trendingKeywords = [
@@ -532,7 +536,7 @@ class AdminController extends Controller
         $recentPosts = Post::with('author.profile')->latest()->limit(5)->get()->map(fn($p) => [
             'id'          => $p->id,
             'type'        => 'NEW_POST',
-            'description' => "Publication par {$p->author->first_name} : " . substr($p->content, 0, 50) . "...",
+            'description' => "Publication par " . ($p->author ? $p->author->first_name : "Membre") . " : " . mb_substr($p->content, 0, 50) . "...",
             'timestamp'   => $p->created_at,
             'meta'        => ['type' => $p->type]
         ]);

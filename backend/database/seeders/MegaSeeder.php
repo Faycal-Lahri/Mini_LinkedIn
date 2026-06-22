@@ -42,6 +42,11 @@ class MegaSeeder extends Seeder
             $user->delete(); // Le boot() du modèle gère toutes les cascades
         }
 
+        // Nettoyer aussi les posts des utilisateurs conservés pour éviter les doublons
+        Post::whereIn('author_id', User::whereIn('email', $keepEmails)->pluck('id'))->get()->each(function($post) {
+            $post->delete();
+        });
+
         // Nettoyer aussi les channels GLOBAL orphelins
         Channel::where('type', 'GLOBAL')->delete();
 
@@ -69,7 +74,11 @@ class MegaSeeder extends Seeder
                     'study_level' => 'Licence 3',
                     'location'    => 'Casablanca, Maroc',
                     'phone'       => '+212 6 61 23 45 67',
-                    'languages'   => ['Arabe', 'Français', 'Anglais'],
+                    'languages'   => [
+                        ['language' => 'Arabe', 'level' => 'Natif'],
+                        ['language' => 'Français', 'level' => 'Bilingue'],
+                        ['language' => 'Anglais', 'level' => 'Courant'],
+                    ],
                     'linkedin_url'=> 'https://linkedin.com/in/yasmine-elmansouri',
                     'github_url'  => 'https://github.com/yasmine-dev',
                     'biography'   => "Yasmine El Mansouri\nÉtudiante passionnée en Génie Informatique à l'IGA Casablanca\n\nJe suis étudiante en troisième année de Licence en Génie Informatique à l'IGA Casablanca. Passionnée par l'intelligence artificielle et le développement logiciel, j'ai développé de solides compétences techniques en Python, Machine Learning, React et SQL.\n\nAu cours de mon cursus, j'ai eu l'opportunité d'effectuer un stage enrichissant chez OCP Group où j'ai contribué au développement d'une solution de visualisation de données pour optimiser les processus industriels. Cette expérience m'a permis de transformer mes connaissances académiques en compétences professionnelles concrètes.\n\nCertifiée Google Data Analytics, je suis constamment en quête de nouveaux défis intellectuels et techniques. Mon objectif est de contribuer à des projets innovants alliant intelligence artificielle et impact social positif.",
@@ -154,7 +163,11 @@ class MegaSeeder extends Seeder
                     'institution' => 'IGA Casablanca', 'field' => 'Génie Logiciel',
                     'study_level' => 'Master 1', 'location' => 'Casablanca, Maroc',
                     'phone' => '+212 6 62 11 22 33',
-                    'languages' => ['Arabe', 'Français', 'Anglais'],
+                    'languages' => [
+                        ['language' => 'Arabe', 'level' => 'Natif'],
+                        ['language' => 'Français', 'level' => 'Bilingue'],
+                        ['language' => 'Anglais', 'level' => 'Courant'],
+                    ],
                     'github_url' => 'https://github.com/karim-benali',
                     'linkedin_url' => 'https://linkedin.com/in/karim-benali',
                     'biography' => "Karim Benali\nÉtudiant en Master Génie Logiciel à IGA Casablanca\n\nJe suis étudiant en première année de Master Génie Logiciel à l'IGA Casablanca. Passionné par le développement full-stack et l'architecture logicielle, j'ai acquis une solide expérience dans la conception et le déploiement d'applications web modernes.\n\nJ'ai participé à plusieurs projets académiques d'envergure, notamment le développement d'une plateforme de e-learning et d'un système de gestion de bibliothèque numérique. Ces expériences m'ont permis de maîtriser des technologies comme Laravel, React.js, Docker et les bases de données relationnelles.\n\nActuellement, je travaille sur un projet de recherche portant sur la détection automatique du plagiat dans les travaux universitaires grâce aux techniques de NLP. Mon ambition est de devenir architecte logiciel spécialisé dans les systèmes distribués à grande échelle.",
@@ -190,7 +203,12 @@ class MegaSeeder extends Seeder
                     'institution' => 'IGA Casablanca', 'field' => 'Intelligence Artificielle',
                     'study_level' => 'Licence 3', 'location' => 'Rabat, Maroc',
                     'phone' => '+212 6 63 44 55 66',
-                    'languages' => ['Arabe', 'Français', 'Anglais', 'Espagnol'],
+                    'languages' => [
+                        ['language' => 'Arabe', 'level' => 'Natif'],
+                        ['language' => 'Français', 'level' => 'Bilingue'],
+                        ['language' => 'Anglais', 'level' => 'Courant'],
+                        ['language' => 'Espagnol', 'level' => 'Avancé'],
+                    ],
                     'linkedin_url' => 'https://linkedin.com/in/salma-ouali',
                     'biography' => "Salma Ouali\nÉtudiante en Licence Intelligence Artificielle à IGA Casablanca\n\nPassionnée par les mathématiques et les algorithmes, je suis étudiante en troisième année de Licence en Intelligence Artificielle à l'IGA Casablanca. Mon parcours m'a permis de développer une expertise dans le machine learning, le deep learning et le traitement du langage naturel.\n\nJ'ai réalisé plusieurs projets pratiques, dont un système de reconnaissance faciale et un chatbot académique intelligent. Ces réalisations m'ont conféré une expérience concrète avec des frameworks comme TensorFlow, PyTorch et scikit-learn.\n\nJe suis également active dans la communauté tech marocaine, participant régulièrement à des hackathons et des conférences sur l'IA. Mon objectif est de contribuer à l'essor de l'IA responsable en Afrique.",
                 ],
@@ -225,7 +243,11 @@ class MegaSeeder extends Seeder
                     'institution' => 'IGA Casablanca', 'field' => 'Réseaux & Télécommunications',
                     'study_level' => 'Master 2', 'location' => 'Casablanca, Maroc',
                     'phone' => '+212 6 64 77 88 99',
-                    'languages' => ['Arabe', 'Français', 'Anglais'],
+                    'languages' => [
+                        ['language' => 'Arabe', 'level' => 'Natif'],
+                        ['language' => 'Français', 'level' => 'Bilingue'],
+                        ['language' => 'Anglais', 'level' => 'Courant'],
+                    ],
                     'linkedin_url' => 'https://linkedin.com/in/mehdi-chaoui',
                     'biography' => "Mehdi Chaoui\nÉtudiant en Master Réseaux & Télécommunications à IGA Casablanca\n\nEn deuxième année de Master Réseaux et Télécommunications à l'IGA Casablanca, je me spécialise dans la sécurité des réseaux et les infrastructures cloud. J'ai développé une expertise technique dans la configuration de réseaux complexes, la virtualisation et la cybersécurité.\n\nPendant mon stage de fin d'études chez Maroc Telecom, j'ai contribué à l'optimisation du réseau 5G dans la région de Casablanca. Cette expérience m'a permis de comprendre les enjeux réels des infrastructures télécoms modernes et d'appliquer des solutions innovantes.\n\nCertifié Cisco CCNA, je prépare actuellement ma certification CCNP. Mon ambition est de devenir ingénieur réseau senior spécialisé dans les infrastructures 5G et les réseaux définis par logiciel (SDN).",
                 ],
@@ -260,7 +282,10 @@ class MegaSeeder extends Seeder
                     'institution' => 'IGA Casablanca', 'field' => 'Data Science',
                     'study_level' => 'Licence 2', 'location' => 'Marrakech, Maroc',
                     'phone' => '+212 6 65 00 11 22',
-                    'languages' => ['Arabe', 'Français'],
+                    'languages' => [
+                        ['language' => 'Arabe', 'level' => 'Natif'],
+                        ['language' => 'Français', 'level' => 'Bilingue'],
+                    ],
                     'linkedin_url' => 'https://linkedin.com/in/nadia-alaoui',
                     'biography' => "Nadia Alaoui\nÉtudiante en Licence Data Science à IGA Casablanca\n\nJe suis étudiante en deuxième année de Licence Data Science à l'IGA Casablanca. Curieuse et déterminée, je me passionne pour l'analyse de données et la statistique appliquée aux problématiques sociales et économiques du Maroc.\n\nAu cours de ma formation, j'ai réalisé plusieurs projets d'analyse de données portant sur la démographie marocaine, les indicateurs économiques régionaux et les tendances du marché de l'emploi. J'utilise quotidiennement Python, R et les outils de visualisation comme Tableau et Power BI.\n\nJe suis convaincue que la data science peut jouer un rôle clé dans le développement durable du Maroc. Mon objectif à court terme est d'obtenir un stage dans une institution internationale pour acquérir une expérience sur des projets à grande échelle.",
                 ],
@@ -295,7 +320,11 @@ class MegaSeeder extends Seeder
                     'institution' => 'IGA Casablanca', 'field' => 'Cybersécurité',
                     'study_level' => 'Master 1', 'location' => 'Fès, Maroc',
                     'phone' => '+212 6 66 33 44 55',
-                    'languages' => ['Arabe', 'Français', 'Anglais'],
+                    'languages' => [
+                        ['language' => 'Arabe', 'level' => 'Natif'],
+                        ['language' => 'Français', 'level' => 'Bilingue'],
+                        ['language' => 'Anglais', 'level' => 'Courant'],
+                    ],
                     'github_url' => 'https://github.com/youssef-radi',
                     'biography' => "Youssef Radi\nÉtudiant en Master Cybersécurité à IGA Casablanca\n\nSpécialisé en cybersécurité et ethical hacking, je suis étudiant en première année de Master à l'IGA Casablanca. Ma passion pour la sécurité informatique m'a conduit à explorer en profondeur les vulnérabilités des systèmes, les techniques de pentesting et les stratégies de défense proactive.\n\nJ'ai obtenu la certification CompTIA Security+ et je travaille actuellement sur ma certification CEH (Certified Ethical Hacker). J'ai participé à plusieurs CTF (Capture The Flag) et competitions de cybersécurité, me classant dans le top 10% sur la plateforme HackTheBox.\n\nMon objectif professionnel est d'intégrer une équipe de sécurité offensive (Red Team) dans une grande entreprise ou une agence gouvernementale pour protéger les infrastructures critiques marocaines.",
                 ],
@@ -378,7 +407,11 @@ class MegaSeeder extends Seeder
                 'profile' => [
                     'institution' => 'IGA Casablanca', 'department' => 'Informatique',
                     'location' => 'Casablanca, Maroc', 'phone' => '+212 5 22 11 22 33',
-                    'languages' => ['Arabe', 'Français', 'Anglais'],
+                    'languages' => [
+                        ['language' => 'Arabe', 'level' => 'Natif'],
+                        ['language' => 'Français', 'level' => 'Bilingue'],
+                        ['language' => 'Anglais', 'level' => 'Courant'],
+                    ],
                     'linkedin_url' => 'https://linkedin.com/in/prof-berrada',
                     'biography' => "Prof. Hassan Berrada\nProfesseur d'Informatique — IGA Casablanca\n\nAvec plus de 15 ans d'expérience dans l'enseignement supérieur, je suis professeur au département Informatique de l'IGA Casablanca. Mes domaines d'enseignement incluent l'ingénierie logicielle, les architectures distribuées et le génie logiciel agile.\n\nTitulaire d'un Doctorat en Informatique de l'Université Mohammed V de Rabat, j'ai publié de nombreux articles dans des revues internationales sur les thèmes de la qualité logicielle et des méthodes agiles. Je suis également consultant pour plusieurs entreprises marocaines dans le secteur digital.\n\nEn dehors de mes cours, j'encadre des projets de fin d'études et supervise des mémoires de master. Je crois fermement que l'éducation est le levier le plus puissant pour le développement de notre pays.",
                 ],
@@ -394,7 +427,11 @@ class MegaSeeder extends Seeder
                 'profile' => [
                     'institution' => 'IGA Casablanca', 'department' => 'Mathématiques & Statistiques',
                     'location' => 'Casablanca, Maroc', 'phone' => '+212 5 22 44 55 66',
-                    'languages' => ['Arabe', 'Français', 'Anglais'],
+                    'languages' => [
+                        ['language' => 'Arabe', 'level' => 'Natif'],
+                        ['language' => 'Français', 'level' => 'Bilingue'],
+                        ['language' => 'Anglais', 'level' => 'Courant'],
+                    ],
                     'biography' => "Prof. Fatima Zahra Idrissi\nProfesseure de Mathématiques & Statistiques — IGA Casablanca\n\nJe suis professeure au département Mathématiques et Statistiques de l'IGA Casablanca depuis 10 ans. Titulaire d'un Doctorat en Mathématiques Appliquées, je me passionne pour l'enseignement des statistiques, de l'algèbre linéaire et des méthodes numériques appliquées à l'informatique.\n\nMes recherches portent sur l'application des méthodes statistiques avancées à l'analyse des données massives et aux modèles d'apprentissage automatique. J'ai co-encadré plus de 50 mémoires de fin d'études et publié 12 articles dans des revues académiques indexées.\n\nJe suis également membre du comité scientifique de la Conférence Nationale sur les Mathématiques Appliquées au Maroc et mentore plusieurs étudiantes dans le cadre du programme Women in Tech Maroc.",
                 ],
                 'skills' => [
@@ -409,7 +446,11 @@ class MegaSeeder extends Seeder
                 'profile' => [
                     'institution' => 'IGA Casablanca', 'department' => 'Réseaux & Systèmes',
                     'location' => 'Casablanca, Maroc', 'phone' => '+212 5 22 77 88 99',
-                    'languages' => ['Arabe', 'Français', 'Anglais'],
+                    'languages' => [
+                        ['language' => 'Arabe', 'level' => 'Natif'],
+                        ['language' => 'Français', 'level' => 'Bilingue'],
+                        ['language' => 'Anglais', 'level' => 'Courant'],
+                    ],
                     'biography' => "Prof. Omar Kettani\nProfesseur Réseaux & Systèmes — IGA Casablanca\n\nIngénieur de formation et docteur en Réseaux Informatiques, j'enseigne à l'IGA Casablanca depuis 12 ans. Mes cours couvrent les protocoles réseau, la sécurité des systèmes d'information, la virtualisation et les technologies cloud.\n\nAnciennes expériences : j'ai travaillé 5 ans chez Maroc Telecom en tant qu'ingénieur réseau senior avant de rejoindre l'enseignement. Cette expérience terrain enrichit considérablement mes cours et permet à mes étudiants de comprendre les réalités du monde professionnel.\n\nJe supervise actuellement un projet de recherche financé par la CNRST sur la mise en place d'un campus intelligent (Smart Campus) à IGA, utilisant des technologies IoT pour optimiser la consommation énergétique.",
                 ],
                 'skills' => [
@@ -424,7 +465,11 @@ class MegaSeeder extends Seeder
                 'profile' => [
                     'institution' => 'IGA Casablanca', 'department' => 'Intelligence Artificielle',
                     'location' => 'Casablanca, Maroc', 'phone' => '+212 5 22 00 11 22',
-                    'languages' => ['Arabe', 'Français', 'Anglais'],
+                    'languages' => [
+                        ['language' => 'Arabe', 'level' => 'Natif'],
+                        ['language' => 'Français', 'level' => 'Bilingue'],
+                        ['language' => 'Anglais', 'level' => 'Courant'],
+                    ],
                     'linkedin_url' => 'https://linkedin.com/in/prof-mansouri-ia',
                     'biography' => "Prof. Laila Mansouri\nProfesseure en Intelligence Artificielle — IGA Casablanca\n\nPionnière dans l'enseignement de l'IA au Maroc, je dirige le département Intelligence Artificielle à l'IGA Casablanca. Mon doctorat obtenu à l'Université Paris-Saclay portait sur les réseaux de neurones convolutifs pour la reconnaissance d'images médicales.\n\nJe collabore activement avec des institutions internationales comme le MIT Media Lab et l'INRIA sur des projets de recherche en IA responsable. Mes travaux récents portent sur le biais algorithmique, l'explicabilité des modèles de ML et l'application de l'IA dans le secteur de la santé au Maroc.\n\nAuteure de deux ouvrages sur l'intelligence artificielle en arabe et en français, je m'engage à démocratiser l'accès à l'IA pour les étudiants marocains et africains.",
                 ],
@@ -686,7 +731,11 @@ class MegaSeeder extends Seeder
                 'department'  => $data['dept'],
                 'location'    => 'Rabat, Maroc',
                 'phone'       => '+212 5 37 ' . rand(10, 99) . ' ' . rand(10, 99) . ' ' . rand(10, 99),
-                'languages'   => ['Arabe', 'Français', 'Anglais'],
+                'languages'   => [
+                    ['language' => 'Arabe', 'level' => 'Natif'],
+                    ['language' => 'Français', 'level' => 'Bilingue'],
+                    ['language' => 'Anglais', 'level' => 'Courant'],
+                ],
                 'biography'   => $data['bio'],
                 'linkedin_url'=> 'https://linkedin.com/in/dr-' . strtolower($data['last_name']),
             ]);
@@ -768,7 +817,7 @@ class MegaSeeder extends Seeder
         Post::create(['author_id' => $kettani->id, 'type' => 'GENERAL', 'content' => 'Nouvelle publication ! Notre article sur le Smart Campus d\'IGA est accepté dans IEEE IoT Journal. Nous montrons comment les capteurs intelligents ont réduit la consommation électrique du campus de 28% en un an. Merci à toute l\'équipe ! 🌿 #SmartCampus #IoT #IGA #Énergie']);
 
         // ================================================================
-        // ÉTAPE 7 : LIKES ET COMMENTAIRES
+        // ÉTAPE 7 : LIKES ET COMMENTAIRES DYNAMIQUES ET RÉALISTES
         // ================================================================
         $this->command->info('❤️  Étape 7 : Likes et commentaires...');
 
@@ -779,49 +828,137 @@ class MegaSeeder extends Seeder
             array_keys($researcherUsers)
         ))->get();
 
-        $allPosts = Post::orderBy('id', 'asc')->get()->take(15);
-
-        foreach ($allPosts as $index => $post) {
-            // Chaque post reçoit entre 3 et 8 likes
-            $likers = $allActiveUsers->random(min(rand(3, 8), $allActiveUsers->count()));
-            foreach ($likers as $liker) {
-                if ($liker->id !== $post->author_id) {
-                    Like::firstOrCreate(['user_id' => $liker->id, 'post_id' => $post->id]);
-                }
-            }
-        }
-
-        // Commentaires ciblés
-        $articlePosts = Post::where('type', 'SCIENTIFIC_ARTICLE')->get();
-        $generalPosts = Post::where('type', 'GENERAL')->get();
-
-        $comments = [
-            ['post' => $generalPosts->first(), 'author' => $salma, 'content' => 'Bravo Yasmine ! Ce stage chez OCP a l\'air incroyable. Tu peux me parler des technologies utilisées ?'],
-            ['post' => $generalPosts->first(), 'author' => $karim, 'content' => 'Plotly pour la visualisation industrielle, c\'est un excellent choix ! Excellent travail 👏'],
-            ['post' => $studentPosts[2], 'author' => $yasmineRefresh, 'content' => 'PlagiaDetect m\'intéresse vraiment pour mon mémoire ! Je contribuerai avec plaisir au projet.'],
-            ['post' => $studentPosts[2], 'author' => $berrada, 'content' => 'Excellent projet Karim ! Le NLP appliqué au plagiat est un besoin réel dans les universités. Bien joué.'],
+        $scArticleAcademicComments = [
+            "Excellents travaux ! Cette publication apporte une réelle contribution au domaine.",
+            "Très intéressant. Avez-vous comparé vos résultats avec les architectures de l'état de l'art ?",
+            "Une approche très prometteuse. Félicitations pour cette publication !",
+            "Félicitations pour ces recherches ! La méthodologie est très rigoureuse et les résultats probants.",
+            "Sujet crucial pour la communauté. Serait-il possible de collaborer sur une extension de ce modèle ?"
         ];
 
-        if ($articlePosts->count() > 0) {
-            Comment::create([
-                'post_id'   => $articlePosts->first()->id,
-                'author_id' => $berrada->id,
-                'content'   => 'Excellents travaux Dr. Moussaoui ! Le federated learning appliqué au médical est exactement ce dont nos hôpitaux marocains ont besoin. Collaboration possible ?',
-            ]);
-            Comment::create([
-                'post_id'   => $articlePosts->first()->id,
-                'author_id' => $salma->id,
-                'content'   => 'Article passionnant ! Je me spécialise en ML médical. Vous acceptez des étudiants en thèse sur ce sujet Dr. Moussaoui ?',
-            ]);
-        }
+        $scArticleStudentComments = [
+            "Merci pour ce partage ! C'est un sujet passionnant qui m'inspire pour mon mémoire.",
+            "Félicitations Docteur ! Est-ce que le code source ou le dataset est disponible en open-source ?",
+            "Super intéressant ! L'application de l'IA dans ce domaine est vraiment l'avenir.",
+            "Félicitations pour cette réussite ! Est-ce que vous proposez des sujets de stage de recherche autour de cette thématique ?"
+        ];
 
-        foreach ($comments as $c) {
-            if ($c['post']) {
-                Comment::create([
-                    'post_id'   => $c['post']->id,
-                    'author_id' => $c['author']->id,
-                    'content'   => $c['content'],
-                ]);
+        $univProjectTeacherComments = [
+            "Excellent projet ! C'est exactement le genre de réalisation pratique qui valorise votre cursus.",
+            "Très bon travail d'équipe. N'oubliez pas de bien documenter l'architecture et les API.",
+            "Bravo pour ce projet. Pensez à le présenter lors de la journée scientifique de l'établissement.",
+            "Travail de qualité. Les fonctionnalités répondent parfaitement à un besoin réel."
+        ];
+
+        $univProjectStudentComments = [
+            "Wow, magnifique boulot ! L'interface utilisateur est super propre.",
+            "Superbe réalisation ! Est-ce que vous recrutez d'autres membres pour continuer le développement ?",
+            "Félicitations à l'équipe ! Très inspirant pour notre groupe de projet.",
+            "Projet très propre, bravo ! Hâte de voir la démo finale."
+        ];
+
+        $internshipComments = [
+            "Félicitations pour ce stage ! C'est une excellente référence sur ton CV.",
+            "Bravo ! L'expérience acquise dans cette entreprise te sera d'une grande aide pour la suite.",
+            "Félicitations ! Travailler sur des projets réels en entreprise est la meilleure école.",
+            "Félicitations ! C'est un super sujet de stage. Profite bien de cette expérience."
+        ];
+
+        $certificationComments = [
+            "Félicitations pour la certification ! C'est un vrai plus pour ta carrière.",
+            "Bravo ! Le travail acharné a payé. Une belle réussite !",
+            "Félicitations ! Cette certification est une étape importante dans ton domaine.",
+            "Superbe réussite, bravo ! Quelle est la prochaine étape ?"
+        ];
+
+        $promoComments = [
+            "Félicitations à tous ! Une très belle étape de franchie.",
+            "Bravo la promo ! Bonne continuation et beaucoup de succès pour la suite.",
+            "Félicitations ! Que du bonheur et de la réussite pour vos parcours respectifs."
+        ];
+
+        $generalTipsComments = [
+            "Merci pour ces précieux conseils ! Très utile pour les débutants.",
+            "Tout à fait d'accord, maîtriser les bases est primordial avant d'aller plus loin.",
+            "Excellent partage, merci pour les ressources !"
+        ];
+
+        $fallbackComments = [
+            "Super intéressant, merci pour le partage !",
+            "Félicitations pour cette contribution !",
+            "Très inspirant ! Bravo 👏",
+            "Excellent travail !"
+        ];
+
+        $allPosts = Post::all();
+
+        foreach ($allPosts as $post) {
+            // 1. LIKES: Chaque post reçoit entre 5 et 12 likes de manière aléatoire
+            $numLikes = rand(5, 12);
+            $likers = $allActiveUsers->reject(function($u) use ($post) {
+                return $u->id === $post->author_id;
+            });
+            
+            if ($likers->count() > 0) {
+                $chosenLikers = $likers->random(min($numLikes, $likers->count()));
+                foreach ($chosenLikers as $liker) {
+                    $reactionType = ['LIKE', 'LOVE', 'CLAP', 'INSIGHTFUL'][rand(0, 3)];
+                    Like::firstOrCreate([
+                        'user_id' => $liker->id,
+                        'post_id' => $post->id
+                    ], [
+                        'type' => $reactionType
+                    ]);
+                }
+            }
+
+            // 2. COMMENTAIRES: Chaque post reçoit entre 1 et 3 commentaires de manière aléatoire
+            $numComments = rand(1, 3);
+            $commenters = $allActiveUsers->reject(function($u) use ($post) {
+                return $u->id === $post->author_id;
+            });
+
+            if ($commenters->count() > 0) {
+                $chosenCommenters = $commenters->random(min($numComments, $commenters->count()));
+                foreach ($chosenCommenters as $commenter) {
+                    $content = "";
+
+                    // Sélectionner le type de commentaire selon le post et le rôle de l'auteur du commentaire
+                    if ($post->type === 'SCIENTIFIC_ARTICLE') {
+                        if ($commenter->role === 'TEACHER' || $commenter->role === 'RESEARCHER') {
+                            $content = $scArticleAcademicComments[array_rand($scArticleAcademicComments)];
+                        } else {
+                            $content = $scArticleStudentComments[array_rand($scArticleStudentComments)];
+                        }
+                    } elseif ($post->type === 'UNIVERSITY_PROJECT') {
+                        if ($commenter->role === 'TEACHER' || $commenter->role === 'RESEARCHER') {
+                            $content = $univProjectTeacherComments[array_rand($univProjectTeacherComments)];
+                        } else {
+                            $content = $univProjectStudentComments[array_rand($univProjectStudentComments)];
+                        }
+                    } else { // GENERAL
+                        $lowerContent = mb_strtolower($post->content);
+                        $lowerTitle = mb_strtolower($post->title ?? '');
+
+                        if (str_contains($lowerContent, 'stage') || str_contains($lowerContent, 'ocp') || str_contains($lowerContent, 'dgssi')) {
+                            $content = $internshipComments[array_rand($internshipComments)];
+                        } elseif (str_contains($lowerContent, 'certif') || str_contains($lowerContent, 'ccna') || str_contains($lowerContent, 'obtention')) {
+                            $content = $certificationComments[array_rand($certificationComments)];
+                        } elseif (str_contains($lowerContent, 'promo') || str_contains($lowerContent, 'diplôm') || str_contains($lowerContent, 'soutenance')) {
+                            $content = $promoComments[array_rand($promoComments)];
+                        } elseif (str_contains($lowerContent, 'conseil') || str_contains($lowerContent, 'débutez') || str_contains($lowerContent, 'ressource')) {
+                            $content = $generalTipsComments[array_rand($generalTipsComments)];
+                        } else {
+                            $content = $fallbackComments[array_rand($fallbackComments)];
+                        }
+                    }
+
+                    Comment::create([
+                        'post_id'   => $post->id,
+                        'author_id' => $commenter->id,
+                        'content'   => $content
+                    ]);
+                }
             }
         }
 
@@ -993,7 +1130,7 @@ class MegaSeeder extends Seeder
             ]);
         }
 
-        // Channel PRIVATE — Yasmine ↔ Karim
+        // Channel PRIVATE — Yasmine ↔ Karim (Expanded)
         $privateChannel1 = Channel::create([
             'name'       => 'Yasmine & Karim',
             'slug'       => 'private-yasmine-karim-' . time(),
@@ -1006,8 +1143,12 @@ class MegaSeeder extends Seeder
         ChatMessage::create(['channel_id' => $privateChannel1->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Oui absolument ! J\'aimerais contribuer à la partie interface React. Je peux commencer quand ?']);
         ChatMessage::create(['channel_id' => $privateChannel1->id, 'sender_id' => $karim->id, 'content' => 'Super ! Je t\'ajoute au repo GitHub. On a une réunion de projet ce vendredi à 15h sur Meet, tu peux y être ?']);
         ChatMessage::create(['channel_id' => $privateChannel1->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Parfait, je serai là ! J\'enverrai d\'abord mes premières maquettes Figma pour qu\'on valide la direction UI.']);
+        ChatMessage::create(['channel_id' => $privateChannel1->id, 'sender_id' => $karim->id, 'content' => 'Génial, j\'ai hâte de voir ça. Est-ce que tu as déjà travaillé avec Zustand pour la gestion d\'état ?']);
+        ChatMessage::create(['channel_id' => $privateChannel1->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Oui, je l\'ai utilisé sur un projet personnel. C\'est beaucoup plus simple et léger que Redux Toolkit.']);
+        ChatMessage::create(['channel_id' => $privateChannel1->id, 'sender_id' => $karim->id, 'content' => 'Parfait ! C\'est exactement ce que j\'ai mis en place sur le boilerplate. Tu te sentiras comme chez toi.']);
+        ChatMessage::create(['channel_id' => $privateChannel1->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Super ! Je commence à cloner le projet ce soir et je regarde la structure.']);
 
-        // Channel PRIVATE — Yasmine ↔ Dr. Moussaoui
+        // Channel PRIVATE — Yasmine ↔ Dr. Moussaoui (Expanded)
         $privateChannel2 = Channel::create([
             'name'       => 'Yasmine & Dr. Moussaoui',
             'slug'       => 'private-yasmine-moussaoui-' . (time() + 1),
@@ -1020,6 +1161,9 @@ class MegaSeeder extends Seeder
         ChatMessage::create(['channel_id' => $privateChannel2->id, 'sender_id' => $moussaoui->id, 'content' => 'Bonjour Yasmine ! Très bien que vous vous intéressiez à ce domaine. Quel aspect vous intéresse particulièrement ?']);
         ChatMessage::create(['channel_id' => $privateChannel2->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'La question de la confidentialité des données patients dans les modèles ML. Comment entraîner des modèles précis sans compromettre la vie privée ?']);
         ChatMessage::create(['channel_id' => $privateChannel2->id, 'sender_id' => $moussaoui->id, 'content' => 'Excellente question. Je vous recommande de commencer par les papers de Dwork sur la "differential privacy". Je peux vous envoyer une bibliographie de démarrage.']);
+        ChatMessage::create(['channel_id' => $privateChannel2->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Oh ce serait parfait ! Merci infiniment pour votre temps, Dr. Moussaoui.']);
+        ChatMessage::create(['channel_id' => $privateChannel2->id, 'sender_id' => $moussaoui->id, 'content' => 'Je viens de vous envoyer les fichiers sur votre email universitaire. N\'hésitez pas si vous avez des questions lors de vos lectures.']);
+        ChatMessage::create(['channel_id' => $privateChannel2->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Bien reçu ! Je commence par l\'article de 2016 sur la privacy-preserving deep learning. Bonne journée !']);
 
         // Channel PRIVATE — Berrada ↔ Karim
         $privateChannel3 = Channel::create([
@@ -1033,6 +1177,84 @@ class MegaSeeder extends Seeder
         ChatMessage::create(['channel_id' => $privateChannel3->id, 'sender_id' => $berrada->id, 'content' => 'Bonjour Karim ! J\'ai vu votre post sur PlagiaDetect, c\'est un projet très prometteur. Vous cherchez un encadrant académique ?']);
         ChatMessage::create(['channel_id' => $privateChannel3->id, 'sender_id' => $karim->id, 'content' => 'Bonjour Prof. Berrada ! Effectivement, ce serait une grande chance d\'avoir votre expertise sur ce projet. Vous seriez disponible pour un meeting de présentation ?']);
         ChatMessage::create(['channel_id' => $privateChannel3->id, 'sender_id' => $berrada->id, 'content' => 'Bien sûr ! La semaine prochaine je suis disponible Mardi et Jeudi après 14h. Préparez une présentation de 15 min du projet.']);
+
+        // Channel PRIVATE — Yasmine ↔ Salma (New)
+        $privateChannel4 = Channel::create([
+            'name'       => 'Yasmine & Salma',
+            'slug'       => 'private-yasmine-salma-' . (time() + 3),
+            'type'       => 'PRIVATE',
+            'is_private' => true,
+            'user1_id'   => $yasmineRefresh->id,
+            'user2_id'   => $salma->id,
+        ]);
+        ChatMessage::create(['channel_id' => $privateChannel4->id, 'sender_id' => $salma->id, 'content' => 'Coucou Yasmine ! Tu as vu le dernier article de Dr. Moussaoui sur les GANs ?']);
+        ChatMessage::create(['channel_id' => $privateChannel4->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Oui ! Je l\'ai lu hier soir. C\'est super intéressant pour notre projet. Tu penses qu\'on peut adapter ça pour notre modèle ?']);
+        ChatMessage::create(['channel_id' => $privateChannel4->id, 'sender_id' => $salma->id, 'content' => 'Je pense que oui, mais on a besoin de plus de puissance de calcul. J\'ai demandé au Prof. Mansouri si on pouvait utiliser le serveur du labo.']);
+        ChatMessage::create(['channel_id' => $privateChannel4->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Ah génial ! Qu\'est-ce qu\'elle a dit ?']);
+        ChatMessage::create(['channel_id' => $privateChannel4->id, 'sender_id' => $salma->id, 'content' => 'Elle est d\'accord ! Elle veut juste qu\'on lui présente un petit plan de ce qu\'on va faire vendredi.']);
+        ChatMessage::create(['channel_id' => $privateChannel4->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Super, je vais préparer les slides alors. Merci beaucoup Salma !']);
+
+        // Channel PRIVATE — Yasmine ↔ Mehdi (New)
+        $privateChannel5 = Channel::create([
+            'name'       => 'Yasmine & Mehdi',
+            'slug'       => 'private-yasmine-mehdi-' . (time() + 4),
+            'type'       => 'PRIVATE',
+            'is_private' => true,
+            'user1_id'   => $yasmineRefresh->id,
+            'user2_id'   => $mehdi->id,
+        ]);
+        ChatMessage::create(['channel_id' => $privateChannel5->id, 'sender_id' => $mehdi->id, 'content' => 'Salut Yasmine, tu t\'y connais en déploiement Docker ? J\'ai un souci avec mon container React.']);
+        ChatMessage::create(['channel_id' => $privateChannel5->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Salut Mehdi ! Oui un peu, c\'est quoi le problème ?']);
+        ChatMessage::create(['channel_id' => $privateChannel5->id, 'sender_id' => $mehdi->id, 'content' => 'En gros, le Hot Module Replacement (HMR) ne fonctionne pas quand je lance avec Docker Compose, je dois rebuild à chaque modification de code.']);
+        ChatMessage::create(['channel_id' => $privateChannel5->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Ah, c\'est classique ! Il faut que tu exposes le port HMR (généralement 5173 ou le port WebSocket de Vite) dans ton docker-compose.yml et configures la section \'server\' dans ton fichier \'vite.config.js\' avec usePolling: true.']);
+        ChatMessage::create(['channel_id' => $privateChannel5->id, 'sender_id' => $mehdi->id, 'content' => 'Ah mais oui ! Je n\'avais pas configuré le polling du tout. Je teste ça tout de suite.']);
+        ChatMessage::create(['channel_id' => $privateChannel5->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Ça marche, tiens-moi au courant si ça résout le problème !']);
+        ChatMessage::create(['channel_id' => $privateChannel5->id, 'sender_id' => $mehdi->id, 'content' => 'Ça fonctionne à la perfection ! Tu me sauves la mise, merci infiniment Yasmine !']);
+
+        // Channel PRIVATE — Yasmine ↔ Nadia (New)
+        $privateChannel6 = Channel::create([
+            'name'       => 'Yasmine & Nadia',
+            'slug'       => 'private-yasmine-nadia-' . (time() + 5),
+            'type'       => 'PRIVATE',
+            'is_private' => true,
+            'user1_id'   => $yasmineRefresh->id,
+            'user2_id'   => $nadia->id,
+        ]);
+        ChatMessage::create(['channel_id' => $privateChannel6->id, 'sender_id' => $nadia->id, 'content' => 'Salut Yasmine ! Est-ce que tu as l\'emploi du temps de la semaine prochaine pour les ateliers Power BI du département ?']);
+        ChatMessage::create(['channel_id' => $privateChannel6->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Salut Nadia ! Oui, le Prof. Idrissi a dit que ce sera le mardi à 14h dans la salle des serveurs.']);
+        ChatMessage::create(['channel_id' => $privateChannel6->id, 'sender_id' => $nadia->id, 'content' => 'Parfait, merci pour l\'info ! Tu comptes y aller ?']);
+        ChatMessage::create(['channel_id' => $privateChannel6->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Oui tout à fait, c\'est super utile pour mon projet. On doit présenter nos tableaux de bord bientôt.']);
+        ChatMessage::create(['channel_id' => $privateChannel6->id, 'sender_id' => $nadia->id, 'content' => 'Super, on s\'y verra alors ! On pourra bosser ensemble après l\'atelier.']);
+        ChatMessage::create(['channel_id' => $privateChannel6->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Avec plaisir ! À mardi.']);
+
+        // Channel PRIVATE — Yasmine ↔ Prof. Berrada (New)
+        $privateChannel7 = Channel::create([
+            'name'       => 'Yasmine & Prof. Berrada',
+            'slug'       => 'private-yasmine-berrada-' . (time() + 6),
+            'type'       => 'PRIVATE',
+            'is_private' => true,
+            'user1_id'   => $yasmineRefresh->id,
+            'user2_id'   => $berrada->id,
+        ]);
+        ChatMessage::create(['channel_id' => $privateChannel7->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Bonjour Prof. Berrada, j\'ai mis à jour la structure de la base de données de Scholar comme vous me l\'avez suggéré lors du dernier point.']);
+        ChatMessage::create(['channel_id' => $privateChannel7->id, 'sender_id' => $berrada->id, 'content' => 'Bonjour Yasmine. C\'est très bien. Avez-vous pensé à configurer correctement les index sur les clés étrangères pour optimiser les requêtes ?']);
+        ChatMessage::create(['channel_id' => $privateChannel7->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Oui, j\'ai ajouté des index sur user_id et post_id. Les temps de réponse se sont nettement améliorés.']);
+        ChatMessage::create(['channel_id' => $privateChannel7->id, 'sender_id' => $berrada->id, 'content' => 'Excellent travail. N\'oubliez pas de profiler vos requêtes SQL pour éviter le problème N+1 sur le feed de posts.']);
+        ChatMessage::create(['channel_id' => $privateChannel7->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'C\'est noté, j\'ai installé clockwork pour faire ce profilage dès aujourd\'hui. Merci pour vos conseils !']);
+
+        // Channel PRIVATE — Yasmine ↔ Prof. Laila Mansouri (New)
+        $privateChannel8 = Channel::create([
+            'name'       => 'Yasmine & Prof. Mansouri',
+            'slug'       => 'private-yasmine-mansouri-' . (time() + 7),
+            'type'       => 'PRIVATE',
+            'is_private' => true,
+            'user1_id'   => $yasmineRefresh->id,
+            'user2_id'   => $mansouri->id,
+        ]);
+        ChatMessage::create(['channel_id' => $privateChannel8->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Bonjour Prof. Mansouri, auriez-vous des recommandations de lectures ou de chartes concernant l\'éthique de l\'IA à inclure dans notre rapport de PFE ?']);
+        ChatMessage::create(['channel_id' => $privateChannel8->id, 'sender_id' => $mansouri->id, 'content' => 'Bonjour Yasmine. Je vous conseille vivement de consulter la Recommandation sur l\'éthique de l\'IA publiée par l\'UNESCO en 2021. C\'est la référence internationale la plus complète actuellement.']);
+        ChatMessage::create(['channel_id' => $privateChannel8->id, 'sender_id' => $yasmineRefresh->id, 'content' => 'Merci beaucoup ! C\'est très utile. Je vais l\'intégrer dans notre section sur les limites éthiques et la protection des données.']);
+        ChatMessage::create(['channel_id' => $privateChannel8->id, 'sender_id' => $mansouri->id, 'content' => 'C\'est une excellente initiative, Yasmine. Le sujet de la protection des données et de l\'explicabilité est crucial pour un projet universitaire de cette envergure. Bon courage !']);
 
         // Channel PROJET — PlagiaDetect
         $projectChannel1 = Channel::create([

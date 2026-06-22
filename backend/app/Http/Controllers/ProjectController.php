@@ -21,13 +21,14 @@ class ProjectController extends Controller
             ->latest()
             ->get();
 
-        $projects->each(function ($p) use ($userId) {
+        // Fetch all project memberships for the current user in one query
+        $memberships = \App\Models\ProjectMembership::where('user_id', $userId)->get()->keyBy('project_id');
+
+        $projects->each(function ($p) use ($userId, $memberships) {
             if ($p->owner_id === $userId) {
                 $p->user_membership_status = 'OWNER';
             } else {
-                $membership = \App\Models\ProjectMembership::where('project_id', $p->id)
-                    ->where('user_id', $userId)
-                    ->first();
+                $membership = $memberships->get($p->id);
                 $p->user_membership_status = $membership ? $membership->status : 'NONE';
             }
         });

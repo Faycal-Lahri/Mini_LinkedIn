@@ -61,11 +61,17 @@ class PostController extends Controller
             $query->latest();
         }
 
+        // Limit query results to prevent loading hundreds of posts at once (improves page speed)
+        if (!$request->has('user_id')) {
+            $limit = $request->input('limit', 20);
+            $query->limit($limit);
+        }
+
         $posts = $query->get();
-        $posts->each(function ($post) {
-            $post->is_liked = $post->isLikedBy(auth()->user());
-            
-            $userLike = $post->likes()->where('user_id', auth()->id())->first();
+        $authId = auth()->id();
+        $posts->each(function ($post) use ($authId) {
+            $userLike = $post->likes->firstWhere('user_id', $authId);
+            $post->is_liked = $userLike !== null;
             $post->user_reaction = $userLike ? $userLike->type : null;
         });
 
